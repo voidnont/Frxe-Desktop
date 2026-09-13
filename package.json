@@ -1,0 +1,20 @@
+{
+  "name": "frxe-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Frxe Desktop for Windows — Frxe UI/UX with the NontMusic backend",
+  "author": "void",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm test && node --check web/core.mjs && node --check web/backend.mjs && node --check web/ui-primitives.mjs && node --check web/ui.mjs && node --check web/app.mjs",
+    "backend:prepare": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/prepare-backend.ps1",
+    "tauri:dev": "npm run backend:prepare && tauri dev",
+    "tauri:build": "npm run backend:prepare && tauri build --bundles msi"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
