@@ -8,6 +8,8 @@ $TempRoot = Join-Path $env:TEMP "frxe-desktop-backend"
 $Archive = Join-Path $TempRoot "backend.tar.gz"
 $ExtractRoot = Join-Path $TempRoot "extract"
 $ArchiveUrl = "https://api.github.com/repositories/$SourceRepositoryId/tarball/$PinnedCommit"
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$utf8 = [System.Text.Encoding]::UTF8
 
 Write-Host "[Frxe Desktop] Preparing pinned native backend..." -ForegroundColor Cyan
 
@@ -31,7 +33,8 @@ if (Test-Path $Target) { Remove-Item $Target -Recurse -Force }
 Copy-Item $SourceTauri $Target -Recurse -Force
 
 $configPath = Join-Path $Target "tauri.conf.json"
-$config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+$configText = [System.IO.File]::ReadAllText($configPath, $utf8)
+$config = $configText | ConvertFrom-Json
 $config.productName = "Frxe Desktop"
 $config.version = "0.1.0"
 $config.identifier = "app.frxe.desktop"
@@ -78,7 +81,6 @@ $config.bundle.icon = @(
 )
 
 $json = $config | ConvertTo-Json -Depth 100
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($configPath, $json, $utf8NoBom)
 
 $legacyName = ([string]::Concat('Nont', 'Music'))
@@ -86,19 +88,12 @@ $legacySlug = $legacyName.ToLowerInvariant()
 Get-ChildItem -LiteralPath $Target -Recurse -File | Where-Object {
     $_.Extension -in @('.rs', '.toml', '.json', '.nsh', '.txt')
 } | ForEach-Object {
-    $content = Get-Content -LiteralPath $_.FullName -Raw
+    $content = [System.IO.File]::ReadAllText($_.FullName, $utf8)
     if ($null -eq $content) { return }
     $content = $content.Replace($legacyName, 'Frxe Desktop').Replace($legacySlug, 'frxe-desktop')
     $content = $content.Replace('frxe-desktop_lib', 'frxe_desktop_lib')
     [System.IO.File]::WriteAllText($_.FullName, $content, $utf8NoBom)
 }
-
-$libPath = Join-Path $Target "src\lib.rs"
-$lib = Get-Content -LiteralPath $libPath -Raw
-$lib = $lib.Replace('"Show Frxe Desktop"', '"Show Frxe Desktop"')
-$lib = $lib.Replace('"Exit Frxe Desktop"', '"Exit Frxe Desktop"')
-$lib = $lib.Replace('.tooltip("Frxe Desktop")', '.tooltip("Frxe Desktop")')
-[System.IO.File]::WriteAllText($libPath, $lib, $utf8NoBom)
 
 $iconTarget = Join-Path $Target "icons"
 $iconBase64 = Join-Path $Root "assets\frxe-icon.png.b64"
