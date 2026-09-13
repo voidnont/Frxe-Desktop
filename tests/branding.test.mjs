@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const skipped = new Set(['.git', 'node_modules', 'src-tauri', 'release-upload']);
-const textExtensions = new Set(['.bat', '.css', '.html', '.json', '.md', '.mjs', '.ps1', '.txt', '.yml', '.yaml']);
+const textExtensions = new Set(['.bat', '.css', '.html', '.json', '.md', '.mjs', '.ps1', '.svg', '.txt', '.yml', '.yaml']);
 const retiredBrand = ['nont', 'music'].join('');
 
 async function collect(dir) {
@@ -28,4 +28,19 @@ test('tracked text stays Frxe-only', async () => {
     if (content.includes(retiredBrand)) matches.push(relative(root, file));
   }
   assert.deepEqual(matches, []);
+});
+
+test('Windows and in-app Frxe branding use one canonical icon asset', async () => {
+  const [index, ui, prepare] = await Promise.all([
+    readFile(join(root, 'web', 'index.html'), 'utf8'),
+    readFile(join(root, 'web', 'ui.mjs'), 'utf8'),
+    readFile(join(root, 'tools', 'prepare-backend.ps1'), 'utf8'),
+  ]);
+
+  assert.match(index, /<link rel="icon" href="\.\/frxe-icon\.svg"/);
+  assert.match(index, /<img class="brand-mark" src="\.\/frxe-icon\.svg"/);
+  assert.match(ui, /<img class="brand-mark large" src="\.\/frxe-icon\.svg"/);
+  assert.match(prepare, /Join-Path \$Root "web\\frxe-icon\.svg"/);
+  assert.doesNotMatch(index, /<div class="brand-mark">F<\/div>/);
+  assert.doesNotMatch(ui, /<div class="brand-mark large">F<\/div>/);
 });
