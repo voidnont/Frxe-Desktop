@@ -2,7 +2,7 @@
   "name": "frxe-desktop",
   "private": true,
   "version": "0.1.0",
-  "description": "Frxe Desktop for Windows — Frxe UI/UX with the NontMusic backend",
+  "description": "Frxe Desktop for Windows",
   "author": "void",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
