@@ -96,9 +96,8 @@ Get-ChildItem -LiteralPath $Target -Recurse -File | Where-Object {
 }
 
 $iconTarget = Join-Path $Target "icons"
-$iconBase64 = Join-Path $Root "assets\frxe-icon.png.b64"
-$iconInput = Join-Path $env:TEMP "frxe-desktop-icon.png"
-[System.IO.File]::WriteAllBytes($iconInput, [Convert]::FromBase64String((Get-Content -LiteralPath $iconBase64 -Raw).Trim()))
+$iconInput = Join-Path $Root "assets\frxe-icon.svg"
+if (-not (Test-Path $iconInput)) { throw "Frxe app icon source is missing." }
 
 Push-Location $Root
 try {
@@ -110,4 +109,5 @@ Remove-Item $TempRoot -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host "[OK] Native backend: $PinnedCommit" -ForegroundColor Green
 Write-Host "[OK] Product: Frxe Desktop / app.frxe.desktop" -ForegroundColor Green
+Write-Host "[OK] Icon: exact Frxe white/black/lime launcher" -ForegroundColor Green
 Write-Host "[OK] Frontend: web" -ForegroundColor Green
