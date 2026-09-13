@@ -89,6 +89,7 @@ Get-ChildItem -LiteralPath $Target -Recurse -File | Where-Object {
     $content = Get-Content -LiteralPath $_.FullName -Raw
     if ($null -eq $content) { return }
     $content = $content.Replace($legacyName, 'Frxe Desktop').Replace($legacySlug, 'frxe-desktop')
+    $content = $content.Replace('frxe-desktop_lib', 'frxe_desktop_lib')
     [System.IO.File]::WriteAllText($_.FullName, $content, $utf8NoBom)
 }
 
