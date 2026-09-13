@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import { extname, join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = new URL('../', import.meta.url).pathname;
+const root = fileURLToPath(new URL('../', import.meta.url));
 const skipped = new Set(['.git', 'node_modules', 'src-tauri', 'release-upload']);
 const textExtensions = new Set(['.bat', '.css', '.html', '.json', '.md', '.mjs', '.ps1', '.txt', '.yml', '.yaml']);
 const retiredBrand = ['nont', 'music'].join('');
