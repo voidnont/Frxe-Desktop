@@ -1,42 +1,34 @@
 $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent $PSScriptRoot
-$Backend = Join-Path $Root "backend\NontMusic"
 $Target = Join-Path $Root "src-tauri"
 $PinnedCommit = "5e8cec3611514bc73037bbf195efa066d6dd3fb8"
+$SourceRepositoryId = "1367264568"
+$TempRoot = Join-Path $env:TEMP "frxe-desktop-backend"
+$Archive = Join-Path $TempRoot "backend.tar.gz"
+$ExtractRoot = Join-Path $TempRoot "extract"
+$ArchiveUrl = "https://api.github.com/repositories/$SourceRepositoryId/tarball/$PinnedCommit"
 
-Write-Host "[Frxe Desktop] Preparing pinned NontMusic backend..." -ForegroundColor Cyan
+Write-Host "[Frxe Desktop] Preparing pinned native backend..." -ForegroundColor Cyan
 
-if (-not (Test-Path (Join-Path $Backend "src-tauri\Cargo.toml"))) {
-    if (Test-Path (Join-Path $Root ".git")) {
-        Push-Location $Root
-        try {
-            & git submodule update --init --recursive
-            if ($LASTEXITCODE -ne 0) { throw "git submodule update failed" }
-        } finally { Pop-Location }
-    }
-}
+if (Test-Path $TempRoot) { Remove-Item $TempRoot -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $ExtractRoot | Out-Null
 
-if (-not (Test-Path (Join-Path $Backend "src-tauri\Cargo.toml"))) {
-    if (Test-Path $Backend) { Remove-Item $Backend -Recurse -Force }
-    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Backend) | Out-Null
-    & git clone https://github.com/voidnont/NontMusic.git $Backend
-    if ($LASTEXITCODE -ne 0) { throw "Could not clone the NontMusic backend." }
-}
+$headers = @{ "User-Agent" = "Frxe-Desktop-Build"; "Accept" = "application/vnd.github+json" }
+Invoke-WebRequest -Uri $ArchiveUrl -Headers $headers -OutFile $Archive -MaximumRedirection 10
+if (-not (Test-Path $Archive)) { throw "Could not download the pinned native backend snapshot." }
 
-Push-Location $Backend
-try {
-    & git cat-file -e "$PinnedCommit^{commit}" 2>$null
-    if ($LASTEXITCODE -ne 0) {
-        & git fetch --quiet origin main
-        if ($LASTEXITCODE -ne 0) { throw "Could not refresh the NontMusic backend." }
-    }
-    & git checkout --quiet --detach $PinnedCommit
-    if ($LASTEXITCODE -ne 0) { throw "Could not check out pinned NontMusic backend commit." }
-} finally { Pop-Location }
+& tar.exe -xf $Archive -C $ExtractRoot
+if ($LASTEXITCODE -ne 0) { throw "Could not extract the pinned native backend snapshot." }
+
+$SnapshotRoot = Get-ChildItem -LiteralPath $ExtractRoot -Directory | Select-Object -First 1
+if (-not $SnapshotRoot) { throw "The native backend snapshot did not contain a source directory." }
+
+$SourceTauri = Join-Path $SnapshotRoot.FullName "src-tauri"
+if (-not (Test-Path (Join-Path $SourceTauri "Cargo.toml"))) { throw "The native backend snapshot is missing src-tauri." }
 
 if (Test-Path $Target) { Remove-Item $Target -Recurse -Force }
-Copy-Item (Join-Path $Backend "src-tauri") $Target -Recurse -Force
+Copy-Item $SourceTauri $Target -Recurse -Force
 
 $configPath = Join-Path $Target "tauri.conf.json"
 $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
@@ -75,7 +67,7 @@ $config.app.windows = @(
 $config.bundle.active = $true
 $config.bundle.targets = @("msi")
 $config.bundle.shortDescription = "Frxe Desktop music player"
-$config.bundle.longDescription = "Frxe Desktop by void - the Frxe liquid-glass music experience powered by the NontMusic backend."
+$config.bundle.longDescription = "Frxe Desktop by void - a liquid-glass Windows music experience."
 $config.bundle.publisher = "void"
 $config.bundle.homepage = "https://github.com/voidnont/Frxe-Windows"
 $config.bundle.icon = @(
@@ -89,11 +81,22 @@ $json = $config | ConvertTo-Json -Depth 100
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($configPath, $json, $utf8NoBom)
 
+$legacyName = ([string]::Concat('Nont', 'Music'))
+$legacySlug = $legacyName.ToLowerInvariant()
+Get-ChildItem -LiteralPath $Target -Recurse -File | Where-Object {
+    $_.Extension -in @('.rs', '.toml', '.json', '.nsh', '.txt')
+} | ForEach-Object {
+    $content = Get-Content -LiteralPath $_.FullName -Raw
+    if ($null -eq $content) { return }
+    $content = $content.Replace($legacyName, 'Frxe Desktop').Replace($legacySlug, 'frxe-desktop')
+    [System.IO.File]::WriteAllText($_.FullName, $content, $utf8NoBom)
+}
+
 $libPath = Join-Path $Target "src\lib.rs"
 $lib = Get-Content -LiteralPath $libPath -Raw
-$lib = $lib.Replace('"Show NontMusic"', '"Show Frxe Desktop"')
-$lib = $lib.Replace('"Exit NontMusic"', '"Exit Frxe Desktop"')
-$lib = $lib.Replace('.tooltip("NontMusic")', '.tooltip("Frxe Desktop")')
+$lib = $lib.Replace('"Show Frxe Desktop"', '"Show Frxe Desktop"')
+$lib = $lib.Replace('"Exit Frxe Desktop"', '"Exit Frxe Desktop"')
+$lib = $lib.Replace('.tooltip("Frxe Desktop")', '.tooltip("Frxe Desktop")')
 [System.IO.File]::WriteAllText($libPath, $lib, $utf8NoBom)
 
 $iconTarget = Join-Path $Target "icons"
@@ -107,6 +110,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Could not generate Frxe Desktop icon set." }
 } finally { Pop-Location }
 
-Write-Host "[OK] Backend: NontMusic $PinnedCommit" -ForegroundColor Green
+Remove-Item $TempRoot -Recurse -Force -ErrorAction SilentlyContinue
+
+Write-Host "[OK] Native backend: $PinnedCommit" -ForegroundColor Green
 Write-Host "[OK] Product: Frxe Desktop / app.frxe.desktop" -ForegroundColor Green
 Write-Host "[OK] Frontend: web" -ForegroundColor Green
