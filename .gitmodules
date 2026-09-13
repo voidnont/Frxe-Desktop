@@ -1,0 +1,3 @@
+[submodule "backend/NontMusic"]
+	path = backend/NontMusic
+	url = https://github.com/voidnont/NontMusic.git
