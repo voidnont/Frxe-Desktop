@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createNontBackend } from '../web/backend.mjs';
+import { createBackend } from '../web/backend.mjs';
 
 const online = { id: 'abcdefghijk', kind: 'youtube', title: 'Song', artist: 'Artist' };
 const local = { id: 'C:/Music/song.m4a', kind: 'local', path: 'C:/Music/song.m4a', title: 'Song', artist: 'Artist' };
 
-test('search fans out across NontMusic providers and deduplicates results', async () => {
+test('search fans out across Frxe providers and deduplicates results', async () => {
   const calls = [];
   const invoke = async (command, payload) => {
     calls.push([command, payload]);
@@ -14,15 +14,15 @@ test('search fans out across NontMusic providers and deduplicates results', asyn
     if (command === 'ytdlp_search') return [{ ...online }];
     throw new Error(`unexpected ${command}`);
   };
-  const backend = createNontBackend({ invoke, convertFileSrc: (path) => `asset:${path}` });
+  const backend = createBackend({ invoke, convertFileSrc: (path) => `asset:${path}` });
   const results = await backend.search('test');
   assert.equal(results.length, 2);
   assert.deepEqual(calls.map(([name]) => name), ['innertube_search', 'innertube_search', 'ytdlp_search']);
 });
 
-test('resolveTrack uses local asset URLs and NontMusic online resolver', async () => {
+test('resolveTrack uses local asset URLs and the Frxe online resolver', async () => {
   const calls = [];
-  const backend = createNontBackend({
+  const backend = createBackend({
     invoke: async (command, payload) => { calls.push([command, payload]); return 'https://stream.test/audio'; },
     convertFileSrc: (path) => `asset://${path}`,
   });
@@ -31,9 +31,9 @@ test('resolveTrack uses local asset URLs and NontMusic online resolver', async (
   assert.deepEqual(calls[0], ['resolve_stream_url', { videoId: online.id }]);
 });
 
-test('startDownload maps Frxe settings to the NontMusic download command', async () => {
+test('startDownload maps Frxe settings to the native download command', async () => {
   let call;
-  const backend = createNontBackend({
+  const backend = createBackend({
     invoke: async (command, payload) => { call = [command, payload]; return null; },
     convertFileSrc: String,
   });
@@ -50,9 +50,9 @@ test('startDownload maps Frxe settings to the NontMusic download command', async
   }]);
 });
 
-test('scanDownloads and lyrics use the NontMusic payload names', async () => {
+test('scanDownloads and lyrics use the native payload names', async () => {
   const calls = [];
-  const backend = createNontBackend({
+  const backend = createBackend({
     invoke: async (command, payload) => { calls.push([command, payload]); return command === 'scan_downloads' ? [local] : { plainLyrics: 'hello' }; },
     convertFileSrc: String,
   });
