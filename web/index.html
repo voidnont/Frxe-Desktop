@@ -26,7 +26,7 @@
     <div class="window-actions">
       <button class="window-button" data-window="minimize" aria-label="Minimize">—</button>
       <button class="window-button" data-window="maximize" aria-label="Maximize">□</button>
-      <button class="window-button close" data-window="close" aria-label="Close">×</button>
+      <button class="window-button close" data-window="close" aria-label="Exit Frxe">×</button>
     </div>
   </header>
 
@@ -34,6 +34,7 @@
   <div id="toast-host" class="toast-host" aria-live="assertive"></div>
   <audio id="audio" preload="metadata"></audio>
 
+  <script type="module" src="./window-controls.mjs"></script>
   <script type="module" src="./app.mjs"></script>
 </body>
 </html>
