@@ -1,7 +1,7 @@
 import { dedupeTracks } from './core.mjs';
 
-export function createNontBackend({ invoke, listen = null, convertFileSrc = (path) => path }) {
-  if (typeof invoke !== 'function') throw new TypeError('NontMusic backend requires an invoke function');
+export function createBackend({ invoke, listen = null, convertFileSrc = (path) => path }) {
+  if (typeof invoke !== 'function') throw new TypeError('Frxe Desktop backend requires an invoke function');
 
   const safeSearch = async (command, payload) => {
     try {
