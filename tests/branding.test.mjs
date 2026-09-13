@@ -31,16 +31,18 @@ test('tracked text stays Frxe-only', async () => {
 });
 
 test('Windows and in-app Frxe branding use one canonical icon asset', async () => {
-  const [index, ui, prepare] = await Promise.all([
+  const [index, styles, prepare, icon] = await Promise.all([
     readFile(join(root, 'web', 'index.html'), 'utf8'),
-    readFile(join(root, 'web', 'ui.mjs'), 'utf8'),
+    readFile(join(root, 'web', 'styles-1.css'), 'utf8'),
     readFile(join(root, 'tools', 'prepare-backend.ps1'), 'utf8'),
+    readFile(join(root, 'web', 'frxe-icon.svg'), 'utf8'),
   ]);
 
   assert.match(index, /<link rel="icon" href="\.\/frxe-icon\.svg"/);
   assert.match(index, /<img class="brand-mark" src="\.\/frxe-icon\.svg"/);
-  assert.match(ui, /<img class="brand-mark large" src="\.\/frxe-icon\.svg"/);
+  assert.match(styles, /\.brand-mark[^}]*url\('\.\/frxe-icon\.svg'\)/s);
   assert.match(prepare, /Join-Path \$Root "web\\frxe-icon\.svg"/);
-  assert.doesNotMatch(index, /<div class="brand-mark">F<\/div>/);
-  assert.doesNotMatch(ui, /<div class="brand-mark large">F<\/div>/);
+  assert.match(icon, /fill="#09090B"/);
+  assert.match(icon, /fill="#FFFFFF"/);
+  assert.match(icon, /fill="#B7FF59"/);
 });
