@@ -1,0 +1,10 @@
+@media (max-height: 760px) {
+  .screen { padding-top: 20px; }
+  .hero { min-height: 290px; padding: 32px; }
+  .hero h1 { font-size: 43px; }
+  .player-main { padding: 24px 38px; }
+  .player-art-wrap { width: min(36vh, 290px); min-width: 190px; }
+  .player-copy { margin-top: 16px; }
+  .player-copy h1 { font-size: 29px; }
+  .seek-wrap { margin-top: 14px; }
+}
