@@ -8,7 +8,7 @@ import {
   safeJsonParse,
   trackKey,
 } from './core.mjs';
-import { createNontBackend } from './backend.mjs';
+import { createBackend } from './backend.mjs';
 import { createView } from './ui.mjs';
 
 const KEYS = {
@@ -30,7 +30,7 @@ const invoke = tauri?.core?.invoke
   : async (command) => { throw new Error(`Native backend unavailable: ${command}`); };
 const listen = tauri?.event?.listen ? tauri.event.listen : null;
 const convertFileSrc = tauri?.core?.convertFileSrc || ((path) => path);
-const backend = createNontBackend({ invoke, listen, convertFileSrc });
+const backend = createBackend({ invoke, listen, convertFileSrc });
 
 const state = {
   tab: 'home',
@@ -100,7 +100,7 @@ async function performSearch(query) {
 }
 
 function readableError(error) {
-  const value = String(error?.message || error || 'Something went wrong.').replaceAll('NontMusic', 'Frxe Desktop');
+  const value = String(error?.message || error || 'Something went wrong.');
   return value.length > 220 ? `${value.slice(0, 217)}…` : value;
 }
 
