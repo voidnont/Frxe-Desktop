@@ -1,0 +1,70 @@
+name: Linux Packages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, feature/cross-platform-installers]
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      APPIMAGE_EXTRACT_AND_RUN: '1'
+    steps:
+      - name: Checkout Frxe Desktop
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Install frontend tooling
+        run: npm install
+
+      - name: Verify frontend
+        run: npm run check
+
+      - name: Generate native icons
+        run: npm run icons
+
+      - name: Test native backend
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Build Linux packages
+        run: npm run tauri:build:linux
+
+      - name: Stage Linux packages
+        run: |
+          mkdir -p release-upload
+          deb="$(find src-tauri/target/release/bundle/deb -type f -name '*.deb' | head -n 1)"
+          appimage="$(find src-tauri/target/release/bundle/appimage -type f -name '*.AppImage' | head -n 1)"
+          test -n "$deb" && test -f "$deb"
+          test -n "$appimage" && test -f "$appimage"
+          cp "$deb" release-upload/Frxe-Desktop-0.1.0-amd64.deb
+          cp "$appimage" release-upload/Frxe-Desktop-0.1.0-x86_64.AppImage
+
+      - name: Upload Frxe Desktop Linux installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: Frxe-Desktop-0.1.0-Linux
+          path: |
+            release-upload/Frxe-Desktop-0.1.0-amd64.deb
+            release-upload/Frxe-Desktop-0.1.0-x86_64.AppImage
+          if-no-files-found: error
