@@ -121,7 +121,7 @@ test('release version and installer names are consistently 1.2.2', async () => {
   assert.doesNotMatch(packaging, /Frxe-Desktop-0\.1\.0|v0\.1\.0/);
 });
 
-test('current project and updater links use voidnont/Frxe-Desktop', async () => {
+test('current project links use voidnont/Frxe-Desktop', async () => {
   const [config, ui, readme, releaseWorkflow] = await Promise.all([
     read('src-tauri/tauri.conf.json'),
     read('web/ui.mjs'),
@@ -133,30 +133,26 @@ test('current project and updater links use voidnont/Frxe-Desktop', async () => 
   assert.doesNotMatch(joined, /github\.com\/voidnont\/Frxe-Windows/i);
 });
 
-test('official Tauri updater is configured for signed Frxe Desktop releases', async () => {
-  const [cargo, lib, capabilities, config, windowsWorkflow, linuxWorkflow, macWorkflow] = await Promise.all([
+test('Frxe Desktop ships without an in-app updater', async () => {
+  const [cargo, lib, capabilities, config, backend, app, ui, windowsWorkflow, linuxWorkflow, macWorkflow, releaseWorkflow] = await Promise.all([
     read('src-tauri/Cargo.toml'),
     read('src-tauri/src/lib.rs'),
     read('src-tauri/capabilities/default.json'),
     read('src-tauri/tauri.conf.json'),
+    read('web/backend.mjs'),
+    read('web/app.mjs'),
+    read('web/ui.mjs'),
     read('.github/workflows/windows-msi.yml'),
     read('.github/workflows/linux-packages.yml'),
     read('.github/workflows/macos-dmg.yml'),
+    read('.github/workflows/release-installers.yml'),
   ]);
-  assert.match(cargo, /tauri-plugin-updater/);
-  assert.match(lib, /tauri_plugin_updater/);
-  assert.match(capabilities, /updater:default/);
-  assert.match(config, /"createUpdaterArtifacts"\s*:\s*true/);
-  assert.match(config, /https:\/\/github\.com\/voidnont\/Frxe-Desktop\/releases\/latest\/download\/latest\.json/);
-  assert.match(config, /"installMode"\s*:\s*"passive"/);
-  const parsed = JSON.parse(config);
-  assert.equal(typeof parsed.plugins?.updater?.pubkey, 'string');
-  assert.ok(parsed.plugins.updater.pubkey.trim().length > 20, 'updater public key must be committed');
-
-  for (const workflow of [windowsWorkflow, linuxWorkflow, macWorkflow]) {
-    assert.match(workflow, /TAURI_SIGNING_PRIVATE_KEY/);
-    assert.match(workflow, /TAURI_SIGNING_PRIVATE_KEY_PASSWORD/);
-  }
+  const joined = [cargo, lib, capabilities, config, backend, app, ui, windowsWorkflow, linuxWorkflow, macWorkflow, releaseWorkflow].join('\n');
+  assert.doesNotMatch(joined, /tauri-plugin-updater|tauri_plugin_updater|updater:default|check_app_update|install_app_update|checkAppUpdate|installAppUpdate|app-update-progress|createUpdaterArtifacts|latest\.json|TAURI_SIGNING_PRIVATE_KEY|Frxe Updates|Check for updates|Update now/);
+  assert.equal(await exists('src-tauri/src/updater.rs'), false);
+  assert.equal(await exists('tools/generate-latest-json.mjs'), false);
+  assert.equal(await exists('tests/updater-ui.test.mjs'), false);
+  assert.equal(await exists('tests/release-metadata.test.mjs'), false);
 });
 
 test('CI publishes the exact Windows Linux and macOS 1.2.2 package names', async () => {
