@@ -2,14 +2,17 @@
   "name": "frxe-desktop",
   "private": true,
   "version": "0.1.0",
-  "description": "Frxe Desktop for Windows",
+  "description": "Frxe Desktop for Windows, Linux and macOS",
   "author": "void",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
     "check": "npm test && node --check web/core.mjs && node --check web/backend.mjs && node --check web/ui-primitives.mjs && node --check web/ui.mjs && node --check web/window-controls.mjs && node --check web/app.mjs",
-    "backend:prepare": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/prepare-backend.ps1",
-    "tauri:dev": "npm run backend:prepare && tauri dev",
-    "tauri:build": "npm run backend:prepare && tauri build --bundles msi"
+    "icons": "tauri icon web/frxe-icon.svg --output src-tauri/icons",
+    "tauri:dev": "npm run icons && tauri dev",
+    "tauri:build": "npm run tauri:build:windows",
+    "tauri:build:windows": "npm run icons && tauri build --bundles msi",
+    "tauri:build:linux": "npm run icons && tauri build --bundles deb,appimage",
+    "tauri:build:macos": "npm run icons && tauri build --bundles dmg"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.4"
