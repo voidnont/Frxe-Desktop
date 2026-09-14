@@ -5,19 +5,24 @@ import { createBackend } from '../web/backend.mjs';
 const online = { id: 'abcdefghijk', kind: 'youtube', title: 'Song', artist: 'Artist' };
 const local = { id: 'C:/Music/song.m4a', kind: 'local', path: 'C:/Music/song.m4a', title: 'Song', artist: 'Artist' };
 
-test('search fans out across Frxe providers and deduplicates results', async () => {
+test('search prioritizes YouTube Music before YouTube fallbacks and deduplicates results', async () => {
   const calls = [];
   const invoke = async (command, payload) => {
     calls.push([command, payload]);
-    if (command === 'innertube_search' && payload.client === 'web') return [online];
-    if (command === 'innertube_search' && payload.client === 'music') return [{ ...online }, { ...online, id: 'zzzzzzzzzzz', title: 'Other' }];
+    if (command === 'innertube_search' && payload.client === 'web') return [{ ...online, source: 'YouTube' }];
+    if (command === 'innertube_search' && payload.client === 'music') return [{ ...online, source: 'YouTube Music' }, { ...online, id: 'zzzzzzzzzzz', title: 'Other', source: 'YouTube Music' }];
     if (command === 'ytdlp_search') return [{ ...online }];
     throw new Error(`unexpected ${command}`);
   };
   const backend = createBackend({ invoke, convertFileSrc: (path) => `asset:${path}` });
   const results = await backend.search('test');
   assert.equal(results.length, 2);
-  assert.deepEqual(calls.map(([name]) => name), ['innertube_search', 'innertube_search', 'ytdlp_search']);
+  assert.deepEqual(calls.map(([name, payload]) => [name, payload.client || null]), [
+    ['innertube_search', 'music'],
+    ['innertube_search', 'web'],
+    ['ytdlp_search', null],
+  ]);
+  assert.equal(results[0].source, 'YouTube Music');
 });
 
 test('resolveTrack uses local asset URLs and the Frxe online resolver', async () => {
