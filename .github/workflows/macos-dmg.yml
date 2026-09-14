@@ -16,9 +16,11 @@ jobs:
         include:
           - runner: macos-26
             arch: arm64
+            file: Frxe-Desktop-0.1.0-macos-arm64.dmg
             artifact: Frxe-Desktop-0.1.0-macOS-Apple-Silicon
           - runner: macos-26-intel
             arch: x64
+            file: Frxe-Desktop-0.1.0-macos-x64.dmg
             artifact: Frxe-Desktop-0.1.0-macOS-Intel
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
@@ -57,11 +59,11 @@ jobs:
           mkdir -p release-upload
           dmg="$(find src-tauri/target/release/bundle/dmg -type f -name '*.dmg' | head -n 1)"
           test -n "$dmg" && test -f "$dmg"
-          cp "$dmg" "release-upload/Frxe-Desktop-0.1.0-macos-${{ matrix.arch }}.dmg"
+          cp "$dmg" "release-upload/${{ matrix.file }}"
 
       - name: Upload Frxe Desktop macOS installer
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: release-upload/Frxe-Desktop-0.1.0-macos-${{ matrix.arch }}.dmg
+          path: release-upload/${{ matrix.file }}
           if-no-files-found: error
