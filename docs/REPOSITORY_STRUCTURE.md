@@ -11,7 +11,6 @@ Frxe-Desktop/
 │   ├── linux/              # Linux-only local build/package entry points
 │   └── macos/              # macOS-only local build/package entry points
 ├── tests/                  # shared automated source and release contracts
-├── tools/                  # cross-platform release tooling only
 ├── .github/workflows/      # CI orchestration for each operating system
 └── README.md
 ```
@@ -34,7 +33,7 @@ Platform-specific native behavior should stay behind Rust target configuration i
 
 ## CI and releases
 
-The workflows under `.github/workflows/` call the matching platform build entry point. A release is publishable only when Windows, Linux, Apple Silicon macOS and Intel macOS packages come from the same source commit and all required updater signatures are present.
+The workflows under `.github/workflows/` call the matching platform build entry point. A release is publishable only when Windows, Linux, Apple Silicon macOS and Intel macOS packages come from the same source commit and all required builds pass.
 
 The five user-facing packages are:
 
@@ -43,5 +42,3 @@ The five user-facing packages are:
 - `Frxe-Desktop-1.2.2-x86_64.AppImage`
 - `Frxe-Desktop-1.2.2-macos-arm64.dmg`
 - `Frxe-Desktop-1.2.2-macos-x64.dmg`
-
-Updater signing material is never stored in this repository. Only the public verification key is allowed in `src-tauri/tauri.conf.json`.
