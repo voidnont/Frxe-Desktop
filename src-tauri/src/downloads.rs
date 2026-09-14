@@ -7,10 +7,7 @@ use std::{
 
 use sysinfo::{Pid, System};
 use tauri::{AppHandle, Emitter, State};
-use tokio::{
-    io::{AsyncBufReadExt, BufReader},
-    process::Command,
-};
+use tokio::io::{AsyncBufReadExt, BufReader};
 use walkdir::WalkDir;
 
 use crate::{models::{DownloadProgress, Track}, runtime};
@@ -171,7 +168,7 @@ pub async fn download_track(
     }
     args.push(url);
 
-    let mut child = Command::new(&ytdlp)
+    let mut child = runtime::silent_command(&ytdlp)
         .args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
