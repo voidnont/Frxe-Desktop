@@ -3,15 +3,15 @@ name: Windows MSI
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, feature/cross-platform-installers]
 
 permissions:
   contents: read
 
 jobs:
   build-msi:
-    runs-on: windows-latest
-    timeout-minutes: 45
+    runs-on: windows-2025
+    timeout-minutes: 60
     steps:
       - name: Checkout Frxe Desktop
         uses: actions/checkout@v4
@@ -31,11 +31,17 @@ jobs:
       - name: Install frontend tooling
         run: npm install
 
-      - name: Verify frontend and adapter
+      - name: Verify frontend
         run: npm run check
 
+      - name: Generate native icons
+        run: npm run icons
+
+      - name: Test native backend
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
       - name: Build MSI
-        run: npm run tauri:build
+        run: npm run tauri:build:windows
 
       - name: Stage MSI
         shell: powershell
