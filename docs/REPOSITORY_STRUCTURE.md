@@ -7,7 +7,7 @@ Frxe-Desktop/
 ├── web/                    # shared desktop UI and frontend logic
 ├── src-tauri/              # shared Rust/Tauri backend and native app config
 ├── platforms/
-│   ├── windows/            # Windows-only local build/package entry points
+│   ├── windows/            # Windows-only local build/development entry points
 │   ├── linux/              # Linux-only local build/package entry points
 │   └── macos/              # macOS-only local build/package entry points
 ├── tests/                  # shared automated source and release contracts
@@ -24,7 +24,7 @@ Do not duplicate `web/` or `src-tauri/` inside a platform folder.
 
 ## Platform folders
 
-`platforms/windows/` contains Windows-only build and packaging files. Its primary local entry point is `platforms/windows/build.bat`.
+`platforms/windows/` contains Windows-only build and development files. Its local entry points are `platforms/windows/build.bat` and `platforms/windows/dev.bat`.
 
 `platforms/linux/` contains Linux-only build and packaging files. Its primary local entry point is `platforms/linux/build.sh`.
 
