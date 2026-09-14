@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: frxe-release-v0.1.0
+  group: frxe-release-v1.2.2
   cancel-in-progress: false
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
           macos_run="$(find_run 'macOS DMG')"
 
           if [[ -z "$windows_run" || -z "$linux_run" || -z "$macos_run" ]]; then
-            echo "Not all installers are green for $HEAD_SHA yet; a later workflow_run event will retry."
+            echo "Not all signed v1.2.2 packages are green for $HEAD_SHA yet; a later workflow event will retry."
             echo "ready=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -55,7 +55,20 @@ jobs:
           echo "linux_run=$linux_run" >> "$GITHUB_OUTPUT"
           echo "macos_run=$macos_run" >> "$GITHUB_OUTPUT"
 
-      - name: Download verified installers
+      - name: Checkout exact verified source
+        if: steps.runs.outputs.ready == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        if: steps.runs.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Download verified signed packages
         if: steps.runs.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -66,29 +79,74 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-upload
-          gh run download "$WINDOWS_RUN" --repo "$GITHUB_REPOSITORY" --name "Frxe-Desktop-0.1.0-Windows" --dir release-upload
-          gh run download "$LINUX_RUN" --repo "$GITHUB_REPOSITORY" --name "Frxe-Desktop-0.1.0-Linux" --dir release-upload
-          gh run download "$MACOS_RUN" --repo "$GITHUB_REPOSITORY" --name "Frxe-Desktop-0.1.0-macOS-Apple-Silicon" --dir release-upload
-          gh run download "$MACOS_RUN" --repo "$GITHUB_REPOSITORY" --name "Frxe-Desktop-0.1.0-macOS-Intel" --dir release-upload
+          gh run download "$WINDOWS_RUN" --repo "$GITHUB_REPOSITORY" --name "Frxe-Desktop-1.2.2-Windows" --dir release-upload
+          gh run download "$LINUX_RUN" --repo "$GITHUB_REPOSITORY" --name "Frxe-Desktop-1.2.2-Linux" --dir release-upload
+          gh run download "$MACOS_RUN" --repo "$GITHUB_REPOSITORY" --name "Frxe-Desktop-1.2.2-macOS-Apple-Silicon" --dir release-upload
+          gh run download "$MACOS_RUN" --repo "$GITHUB_REPOSITORY" --name "Frxe-Desktop-1.2.2-macOS-Intel" --dir release-upload
 
-          test -f release-upload/Frxe-Desktop-0.1.0-x64.msi
-          test -f release-upload/Frxe-Desktop-0.1.0-amd64.deb
-          test -f release-upload/Frxe-Desktop-0.1.0-x86_64.AppImage
-          test -f release-upload/Frxe-Desktop-0.1.0-macos-arm64.dmg
-          test -f release-upload/Frxe-Desktop-0.1.0-macos-x64.dmg
+          test -f release-upload/Frxe-Desktop-1.2.2-x64.msi
+          test -f release-upload/Frxe-Desktop-1.2.2-x64.msi.sig
+          test -f release-upload/Frxe-Desktop-1.2.2-amd64.deb
+          test -f release-upload/Frxe-Desktop-1.2.2-x86_64.AppImage
+          test -f release-upload/Frxe-Desktop-1.2.2-x86_64.AppImage.sig
+          test -f release-upload/Frxe-Desktop-1.2.2-macos-arm64.dmg
+          test -f release-upload/Frxe-Desktop-1.2.2-macos-arm64.app.tar.gz
+          test -f release-upload/Frxe-Desktop-1.2.2-macos-arm64.app.tar.gz.sig
+          test -f release-upload/Frxe-Desktop-1.2.2-macos-x64.dmg
+          test -f release-upload/Frxe-Desktop-1.2.2-macos-x64.app.tar.gz
+          test -f release-upload/Frxe-Desktop-1.2.2-macos-x64.app.tar.gz.sig
 
-      - name: Upload installers to Frxe Desktop 0.1.0 release
+      - name: Generate signed updater metadata
+        if: steps.runs.outputs.ready == 'true'
+        env:
+          FRXE_RELEASE_NOTES: Frxe Desktop 1.2.2
+        run: node tools/generate-latest-json.mjs release-upload
+
+      - name: Publish Frxe Desktop 1.2.2
         if: steps.runs.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          gh release upload v0.1.0 \
-            release-upload/Frxe-Desktop-0.1.0-x64.msi \
-            release-upload/Frxe-Desktop-0.1.0-amd64.deb \
-            release-upload/Frxe-Desktop-0.1.0-x86_64.AppImage \
-            release-upload/Frxe-Desktop-0.1.0-macos-arm64.dmg \
-            release-upload/Frxe-Desktop-0.1.0-macos-x64.dmg \
+          if ! gh release view v1.2.2 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create v1.2.2 \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "${{ github.event.workflow_run.head_sha }}" \
+              --title "Frxe Desktop 1.2.2" \
+              --notes "Frxe Desktop 1.2.2 for Windows, Linux and macOS with signed in-app updates."
+          fi
+
+          gh release upload v1.2.2 \
+            release-upload/Frxe-Desktop-1.2.2-x64.msi \
+            release-upload/Frxe-Desktop-1.2.2-x64.msi.sig \
+            release-upload/Frxe-Desktop-1.2.2-amd64.deb \
+            release-upload/Frxe-Desktop-1.2.2-x86_64.AppImage \
+            release-upload/Frxe-Desktop-1.2.2-x86_64.AppImage.sig \
+            release-upload/Frxe-Desktop-1.2.2-macos-arm64.dmg \
+            release-upload/Frxe-Desktop-1.2.2-macos-arm64.app.tar.gz \
+            release-upload/Frxe-Desktop-1.2.2-macos-arm64.app.tar.gz.sig \
+            release-upload/Frxe-Desktop-1.2.2-macos-x64.dmg \
+            release-upload/Frxe-Desktop-1.2.2-macos-x64.app.tar.gz \
+            release-upload/Frxe-Desktop-1.2.2-macos-x64.app.tar.gz.sig \
+            release-upload/latest.json \
             --repo "$GITHUB_REPOSITORY" \
             --clobber
+
+      - name: Verify published release assets
+        if: steps.runs.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          assets="$(gh release view v1.2.2 --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')"
+          for required in \
+            Frxe-Desktop-1.2.2-x64.msi \
+            Frxe-Desktop-1.2.2-amd64.deb \
+            Frxe-Desktop-1.2.2-x86_64.AppImage \
+            Frxe-Desktop-1.2.2-macos-arm64.dmg \
+            Frxe-Desktop-1.2.2-macos-x64.dmg \
+            latest.json; do
+            grep -Fx "$required" <<<"$assets" >/dev/null || { echo "Missing release asset: $required"; exit 1; }
+          done
