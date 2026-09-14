@@ -35,15 +35,9 @@ jobs:
         with:
           targets: x86_64-unknown-linux-gnu
 
-      - name: Build signed Linux packages
+      - name: Build Linux packages
         shell: bash
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          test -n "${TAURI_SIGNING_PRIVATE_KEY:-}" || { echo "TAURI_SIGNING_PRIVATE_KEY is required."; exit 1; }
-          bash platforms/linux/build.sh
+        run: bash platforms/linux/build.sh
 
       - name: Upload Frxe Desktop Linux packages
         uses: actions/upload-artifact@v4
@@ -52,5 +46,4 @@ jobs:
           path: |
             release-upload/Frxe-Desktop-1.2.2-amd64.deb
             release-upload/Frxe-Desktop-1.2.2-x86_64.AppImage
-            release-upload/Frxe-Desktop-1.2.2-x86_64.AppImage.sig
           if-no-files-found: error
