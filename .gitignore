@@ -1,5 +1,7 @@
 node_modules/
-src-tauri/
 release-upload/
+src-tauri/target/
+src-tauri/icons/
+.frxe-runtime/
 *.log
 .DS_Store
