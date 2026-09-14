@@ -36,7 +36,6 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "createUpdaterArtifacts": true,
     "publisher": "void",
     "shortDescription": "Frxe Desktop music player",
     "longDescription": "Frxe Desktop by void - a liquid-glass desktop music experience.",
@@ -48,16 +47,5 @@
       "icons/icon.ico",
       "icons/icon.icns"
     ]
-  },
-  "plugins": {
-    "updater": {
-      "pubkey": "REPLACE_WITH_FRXE_DESKTOP_TAURI_UPDATER_PUBLIC_KEY_BEFORE_RELEASE",
-      "endpoints": [
-        "https://github.com/voidnont/Frxe-Desktop/releases/latest/download/latest.json"
-      ],
-      "windows": {
-        "installMode": "passive"
-      }
-    }
   }
 }
