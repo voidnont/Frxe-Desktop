@@ -59,10 +59,17 @@ const state = {
   lyricsTrackKey: '',
   runtimeStatus: null,
   runtimeLoading: false,
+  updateStatus: '',
+  updateInfo: null,
+  updateProgress: null,
+  updateError: '',
+  updateChecking: false,
+  updateInstalling: false,
 };
 
 const trackRegistry = new Map();
 let downloadUnlisten = null;
+let updateUnlisten = null;
 let playbackRequestId = 0;
 
 function loadArray(key) {
@@ -306,6 +313,47 @@ async function updateRuntime() {
   }
 }
 
+async function checkForAppUpdate() {
+  if (state.updateChecking || state.updateInstalling) return;
+  state.updateChecking = true;
+  state.updateError = '';
+  state.updateStatus = 'Checking for the newest Frxe Desktop release…';
+  render();
+  try {
+    state.updateInfo = await backend.checkAppUpdate();
+    state.updateStatus = state.updateInfo
+      ? `Frxe Desktop ${state.updateInfo.version} is available.`
+      : "You're up to date.";
+  } catch (error) {
+    state.updateInfo = null;
+    state.updateStatus = '';
+    state.updateError = readableError(error);
+    toast(`Update check failed: ${state.updateError}`, 'error');
+  } finally {
+    state.updateChecking = false;
+    render();
+  }
+}
+
+async function installAppUpdate() {
+  if (!state.updateInfo || state.updateInstalling) return;
+  state.updateInstalling = true;
+  state.updateError = '';
+  state.updateProgress = { state: 'starting', downloaded: 0, total: null };
+  state.updateStatus = `Installing Frxe Desktop ${state.updateInfo.version}…`;
+  render();
+  try {
+    await backend.installAppUpdate();
+    state.updateStatus = 'Update installed. Restarting Frxe Desktop…';
+  } catch (error) {
+    state.updateError = readableError(error);
+    state.updateStatus = '';
+    state.updateInstalling = false;
+    toast(`Update failed: ${state.updateError}`, 'error');
+  }
+  render();
+}
+
 function saveSession() {
   try {
     localStorage.setItem(KEYS.session, JSON.stringify({ track: state.current, queue: state.queue, queueIndex: state.queueIndex, position: audio.currentTime || 0 }));
@@ -351,14 +399,6 @@ function ensureUiEnhancements() {
   }
   if (miniVolume && !miniVolume.matches(':active')) {
     miniVolume.value = String(state.prefs.muted ? 0 : state.prefs.volume);
-  }
-
-  const aboutContent = document.querySelector('.about-card > div:last-child');
-  if (aboutContent && !aboutContent.querySelector('.support-links')) {
-    const links = document.createElement('div');
-    links.className = 'support-links';
-    links.innerHTML = `<a class="support-pill pill" href="https://ko-fi.com/voidnont" data-external="https://ko-fi.com/voidnont">Ko-fi</a><a class="support-pill pill" href="https://github.com/voidnont/frxe-windows" data-external="https://github.com/voidnont/frxe-windows">GitHub</a>`;
-    aboutContent.append(links);
   }
 }
 
@@ -427,6 +467,8 @@ app.addEventListener('click', async (event) => {
     case 'cancel-download': { const task = state.downloads.find((item) => item.id === button.dataset.task); if (task) { await backend.cancelDownload(task.id).catch(() => {}); state.downloads = state.downloads.filter((item) => item.id !== task.id); render(); } break; }
     case 'retry-download': { const task = state.downloads.find((item) => item.id === button.dataset.task); if (task) await queueDownload(task.track, task); break; }
     case 'update-runtime': await updateRuntime(); break;
+    case 'check-update': await checkForAppUpdate(); break;
+    case 'install-update': await installAppUpdate(); break;
   }
 });
 
@@ -505,10 +547,20 @@ async function initialize() {
       if (state.tab === 'save') render();
     });
   } catch {}
+  try {
+    updateUnlisten = await backend.onAppUpdateProgress((payload) => {
+      state.updateProgress = payload || null;
+      if (state.tab === 'settings') render();
+    });
+  } catch {}
   await restoreSession();
   await refreshOffline();
   render();
 }
 
-window.addEventListener('beforeunload', () => { saveSession(); if (typeof downloadUnlisten === 'function') downloadUnlisten(); });
+window.addEventListener('beforeunload', () => {
+  saveSession();
+  if (typeof downloadUnlisten === 'function') downloadUnlisten();
+  if (typeof updateUnlisten === 'function') updateUnlisten();
+});
 void initialize();
