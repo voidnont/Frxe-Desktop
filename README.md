@@ -1,44 +1,42 @@
 # Frxe Desktop
 
-**Frxe Desktop** is the desktop build of Frxe for Windows, Linux and macOS, using one shared Tauri/Rust backend and the Frxe liquid-glass interface.
+Frxe Desktop is the Windows, Linux and macOS desktop edition of Frxe, built from one shared Tauri/Rust backend and one shared desktop interface.
 
-## Experience
+Current release: **1.2.2**
+
+## Features
 
 - YouTube Music-first search with YouTube and yt-dlp fallback
-- Liquid-glass surfaces and artwork-reactive ambient background
-- Fast queue skipping with adjacent-track stream prefetch
-- Glass mini-player with always-accessible volume control
-- Lyrics, queue, favorites, offline downloads and responsive desktop layouts
-- Ko-fi and GitHub support links in the app
+- native desktop audio playback and queue controls
+- fast next/previous with adjacent-track source prefetch
+- always-accessible mini-player volume control
+- favorites, history, downloads and offline playback
+- lyrics and queue views
+- runtime dependency updates for yt-dlp
+- signed in-app Frxe Desktop update checks and installation
+- system tray integration
+- Ko-fi and GitHub links in Home and About
 
-## Native backend
+## Repository layout
 
-The native Rust/Tauri backend is checked into this repository under `src-tauri/`. Builds no longer download or depend on a separate backend repository.
+Shared application code stays in `web/` and `src-tauri/`. Platform-specific build entry points live in `platforms/windows/`, `platforms/linux/`, and `platforms/macos/`.
 
-It provides:
-
-- YouTube Music / YouTube InnerTube search
-- yt-dlp fallback search and stream URL resolution
-- downloads and audio conversion
-- local download scanning
-- LRCLIB metadata lyrics
-- runtime dependency updates
-- tray/native integration
+See `docs/REPOSITORY_STRUCTURE.md` for the maintained layout and packaging rules.
 
 ## Build requirements
 
-All platforms require Node.js 20+, npm, Rust/Cargo, and the normal Tauri prerequisites for the target OS.
+All platforms require Node.js 20+, npm, Rust/Cargo and the normal Tauri prerequisites for the target operating system.
 
 ### Windows
 
 ```bat
-build.bat
+platforms\windows\build.bat
 ```
 
 Output:
 
 ```text
-release-upload\Frxe-Desktop-0.1.0-x64.msi
+release-upload\Frxe-Desktop-1.2.2-x64.msi
 ```
 
 ### Linux
@@ -46,34 +44,43 @@ release-upload\Frxe-Desktop-0.1.0-x64.msi
 Install the normal Tauri Linux/WebKitGTK development dependencies, then run:
 
 ```bash
-bash build-linux.sh
+bash platforms/linux/build.sh
 ```
 
 Outputs:
 
 ```text
-release-upload/Frxe-Desktop-0.1.0-amd64.deb
-release-upload/Frxe-Desktop-0.1.0-x86_64.AppImage
+release-upload/Frxe-Desktop-1.2.2-amd64.deb
+release-upload/Frxe-Desktop-1.2.2-x86_64.AppImage
 ```
 
 ### macOS
 
 ```bash
-bash build-macos.sh
+bash platforms/macos/build.sh
 ```
 
 Output depends on the Mac architecture:
 
 ```text
-release-upload/Frxe-Desktop-0.1.0-macos-arm64.dmg
-release-upload/Frxe-Desktop-0.1.0-macos-x64.dmg
+release-upload/Frxe-Desktop-1.2.2-macos-arm64.dmg
+release-upload/Frxe-Desktop-1.2.2-macos-x64.dmg
 ```
 
-The CI-built macOS packages are unsigned and unnotarized unless Apple Developer signing credentials are configured separately, so Gatekeeper may show the normal unidentified-developer warning.
+Apple Developer signing and notarization can be configured separately. Without those credentials, macOS may show the normal unidentified-developer warning.
 
-## Runtime tools
+## In-app updates
 
-Frxe can update its own yt-dlp runtime from Settings. FFmpeg is intentionally not downloaded from an unpinned third-party binary provider; install FFmpeg on the operating system when using MP3, FLAC, WAV or M4A conversion/remux. Deno is detected when available and shown in runtime status.
+Frxe Desktop uses signed Tauri updater artifacts published with GitHub Releases. The app checks the canonical release feed at the Frxe Desktop repository and verifies the update signature before installation.
+
+Release builds require these GitHub Actions secrets:
+
+```text
+TAURI_SIGNING_PRIVATE_KEY
+TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+```
+
+The private updater key and password must never be committed. Only the matching public verification key belongs in `src-tauri/tauri.conf.json`.
 
 ## Development
 
@@ -83,7 +90,7 @@ npm run check
 npm run tauri:dev
 ```
 
-Platform package commands:
+Shared package commands:
 
 ```text
 npm run tauri:build:windows
@@ -96,6 +103,5 @@ npm run tauri:build:macos
 - Product: **Frxe Desktop**
 - Publisher: **void**
 - App identifier: `app.frxe.desktop`
-- Version: `0.1.0`
-
-GitHub Actions builds the Windows MSI, Linux DEB/AppImage, and separate Apple Silicon/Intel macOS DMGs from the same checked-in source.
+- Version: **1.2.2**
+- Repository: `https://github.com/voidnont/Frxe-Desktop`
