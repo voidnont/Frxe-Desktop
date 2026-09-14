@@ -20,8 +20,8 @@ export function createBackend({ invoke, listen = null, convertFileSrc = (path) =
         ? clean
         : `${clean} song`;
       const groups = await Promise.all([
-        safeSearch('innertube_search', { query: providerQuery, client: 'web' }),
         safeSearch('innertube_search', { query: providerQuery, client: 'music' }),
+        safeSearch('innertube_search', { query: providerQuery, client: 'web' }),
         safeSearch('ytdlp_search', { query: providerQuery }),
       ]);
       return dedupeTracks(groups);
