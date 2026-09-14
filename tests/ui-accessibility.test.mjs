@@ -21,11 +21,13 @@ test('mini player exposes an always-accessible volume slider', async () => {
   assert.match(ui, /aria-label="Volume"/);
 });
 
-test('About card includes Ko-fi and GitHub pill links', async () => {
+test('Home and About include canonical Ko-fi and GitHub pill links', async () => {
   const ui = await uiSource();
+  assert.match(ui, /home-support/);
   assert.match(ui, /https:\/\/ko-fi\.com\/voidnont/);
-  assert.match(ui, /https:\/\/github\.com\/voidnont\/frxe-windows/);
+  assert.match(ui, /https:\/\/github\.com\/voidnont\/Frxe-Desktop/);
   assert.match(ui, /support-links/);
+  assert.doesNotMatch(ui, /frxe-windows/i);
 });
 
 test('select menus use dark readable option styling', async () => {
