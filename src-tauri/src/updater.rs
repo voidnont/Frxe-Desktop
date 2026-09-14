@@ -1,3 +1,8 @@
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
+};
+
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_updater::UpdaterExt;
@@ -58,24 +63,37 @@ pub async fn install_app_update(app: AppHandle) -> Result<(), String> {
     };
 
     emit_progress(&app, "starting", 0, None);
-    let mut downloaded = 0u64;
+    let downloaded = Arc::new(AtomicU64::new(0));
+    let progress_downloaded = Arc::clone(&downloaded);
+    let finish_downloaded = Arc::clone(&downloaded);
     let progress_app = app.clone();
     let finish_app = app.clone();
 
     update
         .download_and_install(
             move |chunk_length, content_length| {
-                downloaded = downloaded.saturating_add(chunk_length as u64);
-                emit_progress(&progress_app, "downloading", downloaded, content_length);
+                let current = progress_downloaded.fetch_add(chunk_length as u64, Ordering::Relaxed)
+                    + chunk_length as u64;
+                emit_progress(&progress_app, "downloading", current, content_length);
             },
             move || {
-                emit_progress(&finish_app, "installing", downloaded, None);
+                emit_progress(
+                    &finish_app,
+                    "installing",
+                    finish_downloaded.load(Ordering::Relaxed),
+                    None,
+                );
             },
         )
         .await
         .map_err(|e| format!("Frxe update failed: {e}"))?;
 
-    emit_progress(&app, "installed", downloaded, None);
+    emit_progress(
+        &app,
+        "installed",
+        downloaded.load(Ordering::Relaxed),
+        None,
+    );
 
     #[cfg(not(target_os = "windows"))]
     app.restart();
