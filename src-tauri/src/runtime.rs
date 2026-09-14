@@ -1,8 +1,22 @@
-use std::{env, path::{Path, PathBuf}};
+use std::{
+    env,
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 use tauri::Manager;
 use tokio::process::Command;
 
 use crate::models::RuntimeStatus;
+
+pub fn silent_command(program: impl AsRef<OsStr>) -> Command {
+    let mut command = Command::new(program);
+    #[cfg(windows)]
+    {
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    command
+}
 
 pub fn ytdlp_asset_name() -> &'static str {
     if cfg!(target_os = "windows") {
@@ -62,7 +76,7 @@ pub fn resolve_deno(dir: &Path) -> Option<PathBuf> {
 }
 
 async fn first_version_line(path: &Path, args: &[&str]) -> Option<String> {
-    let output = Command::new(path).args(args).output().await.ok()?;
+    let output = silent_command(path).args(args).output().await.ok()?;
     if !output.status.success() { return None; }
     String::from_utf8_lossy(&output.stdout)
         .lines()
