@@ -78,14 +78,6 @@ export function createBackend({ invoke, listen = null, convertFileSrc = (path) =
       return invoke('update_runtime_dependencies');
     },
 
-    checkAppUpdate() {
-      return invoke('check_app_update');
-    },
-
-    installAppUpdate() {
-      return invoke('install_app_update');
-    },
-
     setTrayEnabled(enabled) {
       return invoke('set_tray_enabled', { enabled });
     },
@@ -93,11 +85,6 @@ export function createBackend({ invoke, listen = null, convertFileSrc = (path) =
     onDownloadProgress(handler) {
       if (typeof listen !== 'function') return Promise.resolve(() => {});
       return listen('download-progress', (event) => handler(event.payload));
-    },
-
-    onAppUpdateProgress(handler) {
-      if (typeof listen !== 'function') return Promise.resolve(() => {});
-      return listen('app-update-progress', (event) => handler(event.payload));
     },
   };
 }
