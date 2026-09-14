@@ -12,8 +12,7 @@ pub fn silent_command(program: impl AsRef<OsStr>) -> Command {
     let mut command = Command::new(program);
     #[cfg(windows)]
     {
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        command.creation_flags(CREATE_NO_WINDOW);
+        command.creation_flags(0x08000000);
     }
     command
 }
@@ -124,7 +123,7 @@ pub async fn update_runtime_dependencies(app: tauri::AppHandle) -> Result<Runtim
     let target = dir.join(ytdlp_asset_name());
     let response = reqwest::Client::new()
         .get(ytdlp_download_url())
-        .header("User-Agent", "Frxe-Desktop/0.1.0")
+        .header("User-Agent", "Frxe-Desktop/1.2.2")
         .send()
         .await
         .map_err(|e| format!("Could not download yt-dlp: {e}"))?
