@@ -3,7 +3,7 @@ name: Windows MSI
 on:
   workflow_dispatch:
   push:
-    branches: [main, feature/cross-platform-installers]
+    branches: [main]
 
 permissions:
   contents: read
@@ -28,32 +28,21 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
-      - name: Install frontend tooling
-        run: npm install
-
-      - name: Verify frontend
-        run: npm run check
-
-      - name: Generate native icons
-        run: npm run icons
-
-      - name: Test native backend
-        run: cargo test --manifest-path src-tauri/Cargo.toml
-
-      - name: Build MSI
-        run: npm run tauri:build:windows
-
-      - name: Stage MSI
+      - name: Build signed Windows package
         shell: powershell
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          New-Item -ItemType Directory -Force -Path release-upload | Out-Null
-          $msi = Get-ChildItem -Path src-tauri\target\release\bundle\msi -Filter *.msi -Recurse | Select-Object -First 1
-          if (-not $msi) { throw "Tauri build completed without an MSI." }
-          Copy-Item $msi.FullName release-upload\Frxe-Desktop-0.1.0-x64.msi -Force
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) { throw "TAURI_SIGNING_PRIVATE_KEY is required." }
+          & .\platforms\windows\build.bat
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Upload Frxe Desktop MSI
+      - name: Upload Frxe Desktop Windows package
         uses: actions/upload-artifact@v4
         with:
-          name: Frxe-Desktop-0.1.0-Windows
-          path: release-upload/Frxe-Desktop-0.1.0-x64.msi
+          name: Frxe-Desktop-1.2.2-Windows
+          path: |
+            release-upload/Frxe-Desktop-1.2.2-x64.msi
+            release-upload/Frxe-Desktop-1.2.2-x64.msi.sig
           if-no-files-found: error
