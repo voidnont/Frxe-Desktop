@@ -1,10 +1,12 @@
 import {
   DEFAULT_PREFERENCES,
+  createTrackSourceCache,
   currentLyricIndex,
   formatClock,
   nextQueueIndex,
   normalizePreferences,
   parseLrc,
+  queuePrefetchTracks,
   safeJsonParse,
   trackKey,
 } from './core.mjs';
@@ -31,6 +33,7 @@ const invoke = tauri?.core?.invoke
 const listen = tauri?.event?.listen ? tauri.event.listen : null;
 const convertFileSrc = tauri?.core?.convertFileSrc || ((path) => path);
 const backend = createBackend({ invoke, listen, convertFileSrc });
+const sourceCache = createTrackSourceCache((track) => backend.resolveTrack(track));
 
 const state = {
   tab: 'home',
@@ -60,6 +63,7 @@ const state = {
 
 const trackRegistry = new Map();
 let downloadUnlisten = null;
+let playbackRequestId = 0;
 
 function loadArray(key) {
   const value = safeJsonParse(localStorage.getItem(key) || '[]', []);
@@ -116,6 +120,12 @@ function updateMediaSession(track) {
   } catch {}
 }
 
+function prefetchQueueSources() {
+  for (const track of queuePrefetchTracks(state.queue, state.queueIndex, 2)) {
+    sourceCache.prefetch(track);
+  }
+}
+
 async function playTrack(track, queue = null, index = null) {
   if (!track) return;
   const same = trackKey(track) === trackKey(state.current);
@@ -124,6 +134,8 @@ async function playTrack(track, queue = null, index = null) {
     else audio.pause();
     return;
   }
+
+  const requestId = ++playbackRequestId;
   if (queue) {
     state.queue = [...queue];
     state.queueIndex = index ?? Math.max(0, state.queue.findIndex((item) => trackKey(item) === trackKey(track)));
@@ -133,28 +145,37 @@ async function playTrack(track, queue = null, index = null) {
   } else {
     state.queueIndex = state.queue.findIndex((item) => trackKey(item) === trackKey(track));
   }
+
   state.current = track;
   state.resolving = true;
   state.playing = false;
   updateAmbient(track);
   updateMediaSession(track);
   pushHistory(track);
+  prefetchQueueSources();
   render();
+
   try {
-    const source = await backend.resolveTrack(track);
+    const source = await sourceCache.get(track);
+    if (requestId !== playbackRequestId || trackKey(state.current) !== trackKey(track)) return;
     audio.src = source;
     audio.volume = state.prefs.volume;
     audio.muted = state.prefs.muted;
     await audio.play();
+    if (requestId !== playbackRequestId) return;
     state.playing = true;
     if (state.playerOpen) void loadLyrics(track);
   } catch (error) {
+    if (requestId !== playbackRequestId) return;
+    sourceCache.clear(track);
     toast(`Could not play ${track.title}: ${readableError(error)}`, 'error');
     state.playing = false;
   } finally {
-    state.resolving = false;
-    saveSession();
-    render();
+    if (requestId === playbackRequestId) {
+      state.resolving = false;
+      saveSession();
+      render();
+    }
   }
 }
 
@@ -174,6 +195,11 @@ async function togglePlay() {
 async function goNext() {
   const nextIndex = nextQueueIndex({ index: state.queueIndex, length: state.queue.length, repeat: state.prefs.repeat, shuffle: state.prefs.shuffle });
   if (nextIndex < 0) { audio.pause(); audio.currentTime = 0; return; }
+  if (nextIndex === state.queueIndex) {
+    audio.currentTime = 0;
+    if (audio.paused) await audio.play().catch(() => {});
+    return;
+  }
   await playTrack(state.queue[nextIndex], state.queue, nextIndex);
 }
 
@@ -182,6 +208,11 @@ async function goPrevious() {
   if (!state.queue.length) return;
   let index = state.queueIndex - 1;
   if (index < 0) index = state.prefs.repeat === 'queue' ? state.queue.length - 1 : 0;
+  if (index === state.queueIndex) {
+    audio.currentTime = 0;
+    if (audio.paused) await audio.play().catch(() => {});
+    return;
+  }
   await playTrack(state.queue[index], state.queue, index);
 }
 
@@ -288,15 +319,51 @@ async function restoreSession() {
   state.queue = Array.isArray(session.queue) && session.queue.length ? session.queue : [session.track];
   state.queueIndex = Number.isInteger(session.queueIndex) ? session.queueIndex : 0;
   updateAmbient(state.current);
+  prefetchQueueSources();
   try {
-    audio.src = await backend.resolveTrack(state.current);
+    audio.src = await sourceCache.get(state.current);
     audio.addEventListener('loadedmetadata', () => {
       if (Number.isFinite(session.position)) audio.currentTime = Math.min(session.position, audio.duration || session.position);
     }, { once: true });
   } catch {}
 }
 
+function ensureUiEnhancements() {
+  const miniActions = document.querySelector('.mini-actions');
+  if (miniActions && !document.querySelector('#mini-volume')) {
+    const volumeControl = document.createElement('label');
+    volumeControl.className = 'mini-volume';
+    volumeControl.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5L11 19V5Z"></path><path d="M15 9a4 4 0 0 1 0 6"></path><path d="M17.8 6.5a8 8 0 0 1 0 11"></path></svg><input id="mini-volume" type="range" min="0" max="1" step="0.01" value="${state.prefs.muted ? 0 : state.prefs.volume}" aria-label="Volume"/>`;
+    miniActions.prepend(volumeControl);
+  }
+
+  const miniVolume = document.querySelector('#mini-volume');
+  if (miniVolume && miniVolume.dataset.bound !== '1') {
+    miniVolume.dataset.bound = '1';
+    miniVolume.addEventListener('input', (event) => {
+      const value = Number(event.target.value);
+      state.prefs.volume = value;
+      state.prefs.muted = value === 0;
+      audio.volume = value;
+      audio.muted = state.prefs.muted;
+      savePrefs();
+    });
+  }
+  if (miniVolume && !miniVolume.matches(':active')) {
+    miniVolume.value = String(state.prefs.muted ? 0 : state.prefs.volume);
+  }
+
+  const aboutContent = document.querySelector('.about-card > div:last-child');
+  if (aboutContent && !aboutContent.querySelector('.support-links')) {
+    const links = document.createElement('div');
+    links.className = 'support-links';
+    links.innerHTML = `<a class="support-pill pill" href="https://ko-fi.com/voidnont" data-external="https://ko-fi.com/voidnont">Ko-fi</a><a class="support-pill pill" href="https://github.com/voidnont/frxe-windows" data-external="https://github.com/voidnont/frxe-windows">GitHub</a>`;
+    aboutContent.append(links);
+  }
+}
+
 function syncPlayerUi() {
+  ensureUiEnhancements();
   const progress = audio.duration ? Math.max(0, Math.min(100, (audio.currentTime / audio.duration) * 100)) : 0;
   document.querySelector('.mini-progress i')?.style.setProperty('width', `${progress}%`);
   const seek = document.querySelector('#seek');
@@ -311,6 +378,19 @@ function syncPlayerUi() {
 }
 
 app.addEventListener('click', async (event) => {
+  const externalLink = event.target.closest('[data-external]');
+  if (externalLink) {
+    event.preventDefault();
+    const url = externalLink.dataset.external;
+    try {
+      if (tauri?.opener?.openUrl) await tauri.opener.openUrl(url);
+      else window.open(url, '_blank', 'noopener,noreferrer');
+    } catch {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+    return;
+  }
+
   const tabButton = event.target.closest('[data-tab]');
   if (tabButton) {
     state.tab = tabButton.dataset.tab;
@@ -364,7 +444,12 @@ audio.addEventListener('pause', () => { state.playing = false; document.body.cla
 audio.addEventListener('timeupdate', syncPlayerUi);
 audio.addEventListener('durationchange', syncPlayerUi);
 audio.addEventListener('ended', goNext);
-audio.addEventListener('error', () => { if (state.current) toast(`Playback error: ${state.current.title}`, 'error'); });
+audio.addEventListener('error', () => {
+  if (state.current) {
+    sourceCache.clear(state.current);
+    toast(`Playback error: ${state.current.title}`, 'error');
+  }
+});
 
 window.addEventListener('keydown', (event) => {
   const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
