@@ -16,7 +16,7 @@ async function uiSource() {
 
 test('mini player exposes an always-accessible volume slider', async () => {
   const ui = await uiSource();
-  assert.match(ui, /class="mini-volume"/);
+  assert.match(ui, /(?:class="mini-volume"|className\s*=\s*['"]mini-volume['"])/);
   assert.match(ui, /id="mini-volume"/);
   assert.match(ui, /aria-label="Volume"/);
 });
