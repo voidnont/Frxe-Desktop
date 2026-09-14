@@ -5,3 +5,9 @@ src-tauri/icons/
 .frxe-runtime/
 *.log
 .DS_Store
+
+# Local updater signing material must never be committed.
+frxe-updater*
+*.key
+*.key.pub
+*.key.txt
