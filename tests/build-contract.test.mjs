@@ -32,6 +32,21 @@ test('Tauri asset protocol config has the matching Rust feature', async () => {
   assert.match(cargo, /features\s*=\s*\[[^\]]*"protocol-asset"[^\]]*\]/s);
 });
 
+test('Windows release never opens console windows', async () => {
+  const [mainRs, runtimeRs, searchRs, downloadsRs] = await Promise.all([
+    read('src-tauri/src/main.rs'),
+    read('src-tauri/src/runtime.rs'),
+    read('src-tauri/src/search.rs'),
+    read('src-tauri/src/downloads.rs'),
+  ]);
+
+  assert.match(mainRs, /cfg_attr\(not\(debug_assertions\),\s*windows_subsystem\s*=\s*"windows"\)/);
+  assert.match(runtimeRs, /CREATE_NO_WINDOW/);
+  assert.match(runtimeRs, /silent_command/);
+  assert.doesNotMatch(searchRs, /Command::new/);
+  assert.doesNotMatch(downloadsRs, /Command::new/);
+});
+
 test('CI publishes the exact Windows Linux and macOS package names', async () => {
   const [windowsWorkflow, linuxWorkflow, macWorkflow] = await Promise.all([
     read('.github/workflows/windows-msi.yml'),
