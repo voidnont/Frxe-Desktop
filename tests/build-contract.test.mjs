@@ -22,6 +22,16 @@ test('desktop builds are self-contained for all platforms', async () => {
   assert.match(pkg, /tauri icon web\/frxe-icon\.svg/);
 });
 
+test('Tauri asset protocol config has the matching Rust feature', async () => {
+  const [config, cargo] = await Promise.all([
+    read('src-tauri/tauri.conf.json'),
+    read('src-tauri/Cargo.toml'),
+  ]);
+  assert.match(config, /"assetProtocol"\s*:\s*\{/);
+  assert.match(config, /"enable"\s*:\s*true/);
+  assert.match(cargo, /features\s*=\s*\[[^\]]*"protocol-asset"[^\]]*\]/s);
+});
+
 test('CI publishes the exact Windows Linux and macOS package names', async () => {
   const [windowsWorkflow, linuxWorkflow, macWorkflow] = await Promise.all([
     read('.github/workflows/windows-msi.yml'),
