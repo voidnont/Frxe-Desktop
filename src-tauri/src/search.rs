@@ -1,7 +1,6 @@
 use regex::Regex;
 use serde_json::{json, Value};
 use tauri::AppHandle;
-use tokio::process::Command;
 
 use crate::{models::Track, runtime};
 
@@ -219,7 +218,7 @@ pub async fn ytdlp_search(app: AppHandle, query: String) -> Result<Vec<Track>, S
     if query.is_empty() { return Ok(Vec::new()); }
     let runtime_dir = runtime::runtime_dir(&app)?;
     let ytdlp = runtime::resolve_ytdlp(&runtime_dir)?;
-    let output = Command::new(&ytdlp)
+    let output = runtime::silent_command(&ytdlp)
         .args(["--no-warnings", "--flat-playlist", "--dump-single-json", &format!("ytsearch20:{query}")])
         .output()
         .await
@@ -259,7 +258,7 @@ pub async fn resolve_stream_url(app: AppHandle, video_id: String) -> Result<Stri
     let runtime_dir = runtime::runtime_dir(&app)?;
     let ytdlp = runtime::resolve_ytdlp(&runtime_dir)?;
     let url = format!("https://www.youtube.com/watch?v={video_id}");
-    let output = Command::new(&ytdlp)
+    let output = runtime::silent_command(&ytdlp)
         .args(["--no-warnings", "--no-playlist", "-f", "bestaudio/best", "-g", &url])
         .output()
         .await
