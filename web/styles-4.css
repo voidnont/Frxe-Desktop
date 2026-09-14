@@ -1,3 +1,67 @@
+select option {
+  background: #121218;
+  color: #f7f8fb;
+}
+
+select option:checked,
+select option:hover {
+  background: #26262f;
+  color: #fff;
+}
+
+.mini-volume {
+  min-width: 112px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 8px;
+  color: var(--muted);
+}
+
+.mini-volume svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mini-volume input {
+  width: 78px;
+  min-width: 58px;
+}
+
+.support-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.support-pill {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(255,255,255,.11);
+  background: rgba(255,255,255,.07);
+  color: #fff;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.support-pill:hover {
+  background: rgba(255,255,255,.13);
+}
+
+@media (max-width: 980px) {
+  .mini-volume { min-width: 90px; }
+  .mini-volume input { width: 58px; }
+}
+
 @media (max-height: 760px) {
   .screen { padding-top: 20px; }
   .hero { min-height: 290px; padding: 32px; }
