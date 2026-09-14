@@ -27,6 +27,61 @@ export function dedupeTracks(groups) {
   return output;
 }
 
+export function queuePrefetchTracks(queue, index, distance = 2) {
+  if (!Array.isArray(queue) || !queue.length || !Number.isInteger(index)) return [];
+  const output = [];
+  const seen = new Set();
+  for (let step = 1; step <= Math.max(1, distance); step += 1) {
+    for (const candidate of [index - step, index + step]) {
+      const track = queue[candidate];
+      if (!track) continue;
+      const key = trackKey(track);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      output.push(track);
+    }
+  }
+  return output;
+}
+
+export function createTrackSourceCache(resolveTrack, { ttlMs = 120_000, maxEntries = 16, now = Date.now } = {}) {
+  if (typeof resolveTrack !== 'function') throw new TypeError('resolveTrack must be a function');
+  const cache = new Map();
+
+  function trim() {
+    while (cache.size > maxEntries) cache.delete(cache.keys().next().value);
+  }
+
+  function get(track) {
+    const key = trackKey(track);
+    if (!key) return Promise.reject(new Error('Track has no cache key.'));
+    const cached = cache.get(key);
+    if (cached && now() - cached.createdAt < ttlMs) return cached.promise;
+    if (cached) cache.delete(key);
+    const promise = Promise.resolve()
+      .then(() => resolveTrack(track))
+      .catch((error) => {
+        cache.delete(key);
+        throw error;
+      });
+    cache.set(key, { createdAt: now(), promise });
+    trim();
+    return promise;
+  }
+
+  function prefetch(track) {
+    if (!track) return;
+    void get(track).catch(() => {});
+  }
+
+  function clear(track) {
+    if (!track) cache.clear();
+    else cache.delete(trackKey(track));
+  }
+
+  return { get, prefetch, clear };
+}
+
 export function formatClock(value) {
   const seconds = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
   const hours = Math.floor(seconds / 3600);
