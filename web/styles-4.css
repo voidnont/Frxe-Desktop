@@ -57,9 +57,82 @@ select option:hover {
   background: rgba(255,255,255,.13);
 }
 
+.home-support {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 18px 0 92px;
+  padding: 14px 18px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 20px;
+  background: rgba(255,255,255,.035);
+}
+
+.home-support > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.home-support .support-links {
+  margin-top: 0;
+}
+
+.update-card {
+  overflow: hidden;
+}
+
+.update-status {
+  margin-top: 10px;
+  color: #f6f7fb;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.update-release {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 13px;
+}
+
+.update-release small,
+.update-progress small {
+  color: var(--muted);
+}
+
+.update-release p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.update-progress {
+  display: grid;
+  gap: 7px;
+  margin-top: 13px;
+}
+
+.update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
 @media (max-width: 980px) {
   .mini-volume { min-width: 90px; }
   .mini-volume input { width: 58px; }
+}
+
+@media (max-width: 720px) {
+  .home-support {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 @media (max-height: 760px) {
