@@ -1,0 +1,67 @@
+name: macOS DMG
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, feature/cross-platform-installers]
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-26
+            arch: arm64
+            artifact: Frxe-Desktop-0.1.0-macOS-Apple-Silicon
+          - runner: macos-26-intel
+            arch: x64
+            artifact: Frxe-Desktop-0.1.0-macOS-Intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Frxe Desktop
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend tooling
+        run: npm install
+
+      - name: Verify frontend
+        run: npm run check
+
+      - name: Generate native icons
+        run: npm run icons
+
+      - name: Test native backend
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Build macOS DMG
+        run: npm run tauri:build:macos
+
+      - name: Stage macOS DMG
+        shell: bash
+        run: |
+          mkdir -p release-upload
+          dmg="$(find src-tauri/target/release/bundle/dmg -type f -name '*.dmg' | head -n 1)"
+          test -n "$dmg" && test -f "$dmg"
+          cp "$dmg" "release-upload/Frxe-Desktop-0.1.0-macos-${{ matrix.arch }}.dmg"
+
+      - name: Upload Frxe Desktop macOS installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: release-upload/Frxe-Desktop-0.1.0-macos-${{ matrix.arch }}.dmg
+          if-no-files-found: error
