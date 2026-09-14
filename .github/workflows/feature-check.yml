@@ -1,0 +1,20 @@
+name: Feature checks
+
+on:
+  push:
+    branches: [feat/ytmusic-volume-links]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm test
+      - run: node --check web/core.mjs && node --check web/backend.mjs && node --check web/ui-primitives.mjs && node --check web/ui.mjs && node --check web/window-controls.mjs && node --check web/app.mjs
