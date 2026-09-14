@@ -54,6 +54,13 @@ export function createView({
         ${renderSection('Favorites', favorites, { eyebrow: 'YOURS', emptyTitle: 'No favorites yet', emptyBody: 'Tap the heart beside a track to keep it close.' })}
       </div>
       ${renderSection('Offline', offline, { eyebrow: 'SAVED', emptyTitle: 'No offline music yet', emptyBody: 'Download a track and Frxe will keep it in your Music folder.' })}
+      <div class="home-support" aria-label="Frxe links">
+        <span>Support Frxe</span>
+        <div class="support-links">
+          <a class="support-pill pill" href="https://ko-fi.com/voidnont" data-external="https://ko-fi.com/voidnont">Ko-fi</a>
+          <a class="support-pill pill" href="https://github.com/voidnont/Frxe-Desktop" data-external="https://github.com/voidnont/Frxe-Desktop">GitHub</a>
+        </div>
+      </div>
     </div>`;
   }
 
@@ -121,8 +128,11 @@ export function createView({
 
   function renderSettings() {
     const status = state.runtimeStatus;
+    const update = state.updateInfo;
+    const progress = state.updateProgress || {};
+    const percent = progress.total ? Math.min(100, Math.round((Number(progress.downloaded || 0) / Number(progress.total)) * 100)) : 0;
     return `<div class="screen settings-screen">
-      <div class="screen-heading"><span class="eyebrow">FRXE</span><h1>Settings</h1><p>Desktop behavior and Frxe runtime tools.</p></div>
+      <div class="screen-heading"><span class="eyebrow">FRXE</span><h1>Settings</h1><p>Desktop behavior, updates and Frxe runtime tools.</p></div>
       <div class="settings-grid">
         <section class="settings-card glass">
           <div class="setting-head"><div><span>OFFLINE</span><h2>Downloads</h2></div>${icon('download', 22)}</div>
@@ -144,12 +154,12 @@ export function createView({
 
         <section class="settings-card glass">
           <div class="setting-head"><div><span>NATIVE</span><h2>Desktop</h2></div>${icon('settings', 22)}</div>
-          <label class="toggle-row"><span><b>System tray</b><small>Keep Frxe available from the Windows tray.</small></span><input id="tray-toggle" type="checkbox" ${state.prefs.trayEnabled !== false ? 'checked' : ''}/><i></i></label>
+          <label class="toggle-row"><span><b>System tray</b><small>Keep Frxe available from the system tray.</small></span><input id="tray-toggle" type="checkbox" ${state.prefs.trayEnabled !== false ? 'checked' : ''}/><i></i></label>
           <label class="toggle-row"><span><b>Reduced motion</b><small>Reduce ambient and spring movement.</small></span><input id="motion-toggle" type="checkbox" ${state.prefs.reducedMotion ? 'checked' : ''}/><i></i></label>
         </section>
 
         <section class="settings-card glass runtime-card">
-          <div class="setting-head"><div><span>BACKEND</span><h2>Frxe runtime</h2></div><span class="backend-badge">PINNED</span></div>
+          <div class="setting-head"><div><span>BACKEND</span><h2>Frxe runtime</h2></div><span class="backend-badge">NATIVE</span></div>
           <p>yt-dlp, Deno, FFmpeg and InnerTube compatibility are managed by Frxe Desktop.</p>
           ${status ? `<div class="runtime-list">
             <span>yt-dlp <b>${escapeHtml(status.ytDlpVersion || 'unknown')}</b></span>
@@ -159,9 +169,22 @@ export function createView({
           <button class="primary pill" data-action="update-runtime" ${state.runtimeLoading ? 'disabled' : ''}>${state.runtimeLoading ? 'Updating…' : 'Update runtime dependencies'}</button>
         </section>
 
+        <section class="settings-card glass update-card">
+          <div class="setting-head"><div><span>APP</span><h2>Frxe Updates</h2></div><span class="backend-badge">1.2.2</span></div>
+          <p>Current version <b>1.2.2</b>. Frxe verifies signed updates before installing them.</p>
+          ${state.updateStatus ? `<div class="update-status">${escapeHtml(state.updateStatus)}</div>` : ''}
+          ${update ? `<div class="update-release glass-soft"><b>Version ${escapeHtml(update.version)}</b>${update.date ? `<small>${escapeHtml(update.date)}</small>` : ''}${update.notes ? `<p>${escapeHtml(update.notes)}</p>` : ''}</div>` : ''}
+          ${state.updateInstalling ? `<div class="update-progress"><div class="progress-rail"><i style="width:${percent}%"></i></div><small>${escapeHtml(progress.state || 'Preparing update')}${progress.total ? ` · ${percent}%` : ''}</small></div>` : ''}
+          ${state.updateError ? `<div class="inline-error">${escapeHtml(state.updateError)}</div>` : ''}
+          <div class="update-actions">
+            <button class="secondary pill" data-action="check-update" ${state.updateChecking || state.updateInstalling ? 'disabled' : ''}>${state.updateChecking ? 'Checking…' : 'Check for updates'}</button>
+            ${update ? `<button class="primary pill" data-action="install-update" ${state.updateInstalling ? 'disabled' : ''}>${state.updateInstalling ? 'Updating…' : 'Update now'}</button>` : ''}
+          </div>
+        </section>
+
         <section class="settings-card glass about-card">
           <div class="brand-mark large">F</div>
-          <div><span>ABOUT</span><h2>Frxe Desktop 0.1.0</h2><p>Frxe Android UI language. Native Frxe backend. Built by void.</p></div>
+          <div><span>ABOUT</span><h2>Frxe Desktop 1.2.2</h2><p>Frxe desktop music experience by void.</p><div class="support-links"><a class="support-pill pill" href="https://ko-fi.com/voidnont" data-external="https://ko-fi.com/voidnont">Ko-fi</a><a class="support-pill pill" href="https://github.com/voidnont/Frxe-Desktop" data-external="https://github.com/voidnont/Frxe-Desktop">GitHub</a></div></div>
         </section>
       </div>
     </div>`;
