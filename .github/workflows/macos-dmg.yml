@@ -3,7 +3,7 @@ name: macOS DMG
 on:
   workflow_dispatch:
   push:
-    branches: [main, feature/cross-platform-installers]
+    branches: [main]
 
 permissions:
   contents: read
@@ -15,13 +15,15 @@ jobs:
       matrix:
         include:
           - runner: macos-26
-            arch: arm64
-            file: Frxe-Desktop-0.1.0-macos-arm64.dmg
-            artifact: Frxe-Desktop-0.1.0-macOS-Apple-Silicon
+            file: Frxe-Desktop-1.2.2-macos-arm64.dmg
+            updater: Frxe-Desktop-1.2.2-macos-arm64.app.tar.gz
+            signature: Frxe-Desktop-1.2.2-macos-arm64.app.tar.gz.sig
+            artifact: Frxe-Desktop-1.2.2-macOS-Apple-Silicon
           - runner: macos-26-intel
-            arch: x64
-            file: Frxe-Desktop-0.1.0-macos-x64.dmg
-            artifact: Frxe-Desktop-0.1.0-macOS-Intel
+            file: Frxe-Desktop-1.2.2-macos-x64.dmg
+            updater: Frxe-Desktop-1.2.2-macos-x64.app.tar.gz
+            signature: Frxe-Desktop-1.2.2-macos-x64.app.tar.gz.sig
+            artifact: Frxe-Desktop-1.2.2-macOS-Intel
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
@@ -38,32 +40,25 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install frontend tooling
-        run: npm install
-
-      - name: Verify frontend
-        run: npm run check
-
-      - name: Generate native icons
-        run: npm run icons
-
-      - name: Test native backend
-        run: cargo test --manifest-path src-tauri/Cargo.toml
-
-      - name: Build macOS DMG
-        run: npm run tauri:build:macos
-
-      - name: Stage macOS DMG
+      - name: Build signed macOS package
         shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          mkdir -p release-upload
-          dmg="$(find src-tauri/target/release/bundle/dmg -type f -name '*.dmg' | head -n 1)"
-          test -n "$dmg" && test -f "$dmg"
-          cp "$dmg" "release-upload/${{ matrix.file }}"
+          set -euo pipefail
+          test -n "${TAURI_SIGNING_PRIVATE_KEY:-}" || { echo "TAURI_SIGNING_PRIVATE_KEY is required."; exit 1; }
+          bash platforms/macos/build.sh
+          test -f "release-upload/${{ matrix.file }}"
+          test -f "release-upload/${{ matrix.updater }}"
+          test -f "release-upload/${{ matrix.signature }}"
 
-      - name: Upload Frxe Desktop macOS installer
+      - name: Upload Frxe Desktop macOS package
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: release-upload/${{ matrix.file }}
+          path: |
+            release-upload/${{ matrix.file }}
+            release-upload/${{ matrix.updater }}
+            release-upload/${{ matrix.signature }}
           if-no-files-found: error
