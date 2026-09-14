@@ -1,0 +1,94 @@
+name: Publish Installers to Release
+
+on:
+  workflow_run:
+    workflows: ["Windows MSI", "Linux Packages", "macOS DMG"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: frxe-release-v0.1.0
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find matching successful package runs
+        id: runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          find_run() {
+            gh run list \
+              --repo "$GITHUB_REPOSITORY" \
+              --workflow "$1" \
+              --branch main \
+              --commit "$HEAD_SHA" \
+              --status success \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId // empty'
+          }
+
+          windows_run="$(find_run 'Windows MSI')"
+          linux_run="$(find_run 'Linux Packages')"
+          macos_run="$(find_run 'macOS DMG')"
+
+          if [[ -z "$windows_run" || -z "$linux_run" || -z "$macos_run" ]]; then
+            echo "Not all installers are green for $HEAD_SHA yet; a later workflow_run event will retry."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "windows_run=$windows_run" >> "$GITHUB_OUTPUT"
+          echo "linux_run=$linux_run" >> "$GITHUB_OUTPUT"
+          echo "macos_run=$macos_run" >> "$GITHUB_OUTPUT"
+
+      - name: Download verified installers
+        if: steps.runs.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WINDOWS_RUN: ${{ steps.runs.outputs.windows_run }}
+          LINUX_RUN: ${{ steps.runs.outputs.linux_run }}
+          MACOS_RUN: ${{ steps.runs.outputs.macos_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-upload
+          gh run download "$WINDOWS_RUN" --repo "$GITHUB_REPOSITORY" --name "Frxe-Desktop-0.1.0-Windows" --dir release-upload
+          gh run download "$LINUX_RUN" --repo "$GITHUB_REPOSITORY" --name "Frxe-Desktop-0.1.0-Linux" --dir release-upload
+          gh run download "$MACOS_RUN" --repo "$GITHUB_REPOSITORY" --name "Frxe-Desktop-0.1.0-macOS-Apple-Silicon" --dir release-upload
+          gh run download "$MACOS_RUN" --repo "$GITHUB_REPOSITORY" --name "Frxe-Desktop-0.1.0-macOS-Intel" --dir release-upload
+
+          test -f release-upload/Frxe-Desktop-0.1.0-x64.msi
+          test -f release-upload/Frxe-Desktop-0.1.0-amd64.deb
+          test -f release-upload/Frxe-Desktop-0.1.0-x86_64.AppImage
+          test -f release-upload/Frxe-Desktop-0.1.0-macos-arm64.dmg
+          test -f release-upload/Frxe-Desktop-0.1.0-macos-x64.dmg
+
+      - name: Upload installers to Frxe Desktop 0.1.0 release
+        if: steps.runs.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload v0.1.0 \
+            release-upload/Frxe-Desktop-0.1.0-x64.msi \
+            release-upload/Frxe-Desktop-0.1.0-amd64.deb \
+            release-upload/Frxe-Desktop-0.1.0-x86_64.AppImage \
+            release-upload/Frxe-Desktop-0.1.0-macos-arm64.dmg \
+            release-upload/Frxe-Desktop-0.1.0-macos-x64.dmg \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
