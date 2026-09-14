@@ -4,7 +4,6 @@ mod models;
 mod runtime;
 mod search;
 mod tray;
-mod updater;
 
 #[tauri::command]
 fn exit_app(app: tauri::AppHandle) {
@@ -14,7 +13,6 @@ fn exit_app(app: tauri::AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(downloads::DownloadManager::default())
         .setup(|app| {
             tray::install(app)?;
@@ -32,8 +30,6 @@ pub fn run() {
             downloads::remove_download,
             lyrics::fetch_metadata_lyrics,
             runtime::update_runtime_dependencies,
-            updater::check_app_update,
-            updater::install_app_update,
             tray::set_tray_enabled,
             exit_app
         ])
