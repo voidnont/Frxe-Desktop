@@ -11,13 +11,14 @@ const exists = async (path) => access(join(root, path)).then(() => true, () => f
 test('desktop builds are self-contained and platform entry points are separated', async () => {
   for (const path of [
     'platforms/windows/build.bat',
+    'platforms/windows/dev.bat',
     'platforms/linux/build.sh',
     'platforms/macos/build.sh',
     'docs/REPOSITORY_STRUCTURE.md',
   ]) {
     assert.equal(await exists(path), true, `${path} must exist`);
   }
-  for (const path of ['build.bat', 'build-linux.sh', 'build-macos.sh']) {
+  for (const path of ['build.bat', 'dev.bat', 'build-linux.sh', 'build-macos.sh']) {
     assert.equal(await exists(path), false, `${path} must move under platforms/`);
   }
 
