@@ -10,15 +10,19 @@ async function source(path) {
   return readFile(join(root, path), 'utf8');
 }
 
+async function uiSource() {
+  return [await source('web/ui.mjs'), await source('web/app.mjs')].join('\n');
+}
+
 test('mini player exposes an always-accessible volume slider', async () => {
-  const ui = await source('web/ui.mjs');
+  const ui = await uiSource();
   assert.match(ui, /class="mini-volume"/);
   assert.match(ui, /id="mini-volume"/);
   assert.match(ui, /aria-label="Volume"/);
 });
 
 test('About card includes Ko-fi and GitHub pill links', async () => {
-  const ui = await source('web/ui.mjs');
+  const ui = await uiSource();
   assert.match(ui, /https:\/\/ko-fi\.com\/voidnont/);
   assert.match(ui, /https:\/\/github\.com\/voidnont\/frxe-windows/);
   assert.match(ui, /support-links/);
