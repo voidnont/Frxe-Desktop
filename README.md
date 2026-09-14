@@ -1,52 +1,35 @@
 # Frxe Desktop
 
-**Frxe Desktop** is the Windows build of Frxe: the Frxe Android visual and interaction language adapted for desktop with a native Rust/Tauri backend.
+**Frxe Desktop** is the desktop build of Frxe for Windows, Linux and macOS, using one shared Tauri/Rust backend and the Frxe liquid-glass interface.
 
 ## Experience
 
+- YouTube Music-first search with YouTube and yt-dlp fallback
 - Liquid-glass surfaces and artwork-reactive ambient background
-- Spring-style press and navigation motion
-- Bottom floating navigation with the selected destination expanding to icon + label
-- Home, Search, Save, Library and Settings flow
-- Glass mini-player and full Now Playing experience
+- Fast queue skipping with adjacent-track stream prefetch
+- Glass mini-player with always-accessible volume control
 - Lyrics, queue, favorites, offline downloads and responsive desktop layouts
+- Ko-fi and GitHub support links in the app
 
 ## Native backend
 
-The Windows build prepares a pinned native backend snapshot at build time and applies Frxe Desktop identity and branding before compilation.
+The native Rust/Tauri backend is checked into this repository under `src-tauri/`. Builds no longer download or depend on a separate backend repository.
 
-It provides native service logic for:
+It provides:
 
-- YouTube / YouTube Music InnerTube search
-- yt-dlp fallback search
-- stream URL resolution
-- downloads and conversion
+- YouTube Music / YouTube InnerTube search
+- yt-dlp fallback search and stream URL resolution
+- downloads and audio conversion
 - local download scanning
-- metadata lyrics
+- LRCLIB metadata lyrics
 - runtime dependency updates
-- Tauri tray/native integration
+- tray/native integration
 
-The generated `src-tauri/` folder is intentionally gitignored so the prepared backend remains reproducible and does not drift between builds.
+## Build requirements
 
-## Windows build
+All platforms require Node.js 20+, npm, Rust/Cargo, and the normal Tauri prerequisites for the target OS.
 
-Requirements:
-
-- Windows 10 or 11
-- Git
-- Node.js 20+
-- npm
-- Rust/Cargo with the MSVC toolchain
-- WebView2 / normal Tauri Windows prerequisites
-
-Clone:
-
-```bat
-git clone https://github.com/voidnont/Frxe-Windows.git
-cd Frxe-Windows
-```
-
-Build the MSI:
+### Windows
 
 ```bat
 build.bat
@@ -58,51 +41,61 @@ Output:
 release-upload\Frxe-Desktop-0.1.0-x64.msi
 ```
 
-For development:
+### Linux
 
-```bat
-dev.bat
+Install the normal Tauri Linux/WebKitGTK development dependencies, then run:
+
+```bash
+bash build-linux.sh
 ```
 
-Every push to `main` also runs the **Windows MSI** GitHub Actions workflow and uploads the MSI as a workflow artifact.
+Outputs:
 
-## Tests
+```text
+release-upload/Frxe-Desktop-0.1.0-amd64.deb
+release-upload/Frxe-Desktop-0.1.0-x86_64.AppImage
+```
 
-The frontend core and native command adapter use Node's built-in test runner:
+### macOS
 
-```bat
-npm test
+```bash
+bash build-macos.sh
+```
+
+Output depends on the Mac architecture:
+
+```text
+release-upload/Frxe-Desktop-0.1.0-macos-arm64.dmg
+release-upload/Frxe-Desktop-0.1.0-macos-x64.dmg
+```
+
+The CI-built macOS packages are unsigned and unnotarized unless Apple Developer signing credentials are configured separately, so Gatekeeper may show the normal unidentified-developer warning.
+
+## Runtime tools
+
+Frxe can update its own yt-dlp runtime from Settings. FFmpeg is intentionally not downloaded from an unpinned third-party binary provider; install FFmpeg on the operating system when using MP3, FLAC, WAV or M4A conversion/remux. Deno is detected when available and shown in runtime status.
+
+## Development
+
+```bash
+npm install
 npm run check
+npm run tauri:dev
 ```
 
-The tests also guard against reintroducing retired product branding into tracked text files.
+Platform package commands:
+
+```text
+npm run tauri:build:windows
+npm run tauri:build:linux
+npm run tauri:build:macos
+```
 
 ## Product identity
 
 - Product: **Frxe Desktop**
 - Publisher: **void**
 - App identifier: `app.frxe.desktop`
-- Installer: MSI
-- Backend: pinned native Rust/Tauri snapshot
+- Version: `0.1.0`
 
-## Repository layout
-
-```text
-Frxe-Windows/
-├── web/                     # Frxe Desktop UI/UX
-│   ├── index.html
-│   ├── app.mjs
-│   ├── backend.mjs
-│   ├── core.mjs
-│   ├── ui.mjs
-│   ├── ui-primitives.mjs
-│   └── styles-*.css
-├── assets/                  # Frxe launcher artwork source
-├── tests/                   # frontend/backend-adapter tests
-├── tools/prepare-backend.ps1
-├── build.bat
-├── dev.bat
-└── package.json
-```
-
-Frxe Desktop is a standalone Windows application identity.
+GitHub Actions builds the Windows MSI, Linux DEB/AppImage, and separate Apple Silicon/Intel macOS DMGs from the same checked-in source.
