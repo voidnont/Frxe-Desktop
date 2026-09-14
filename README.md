@@ -13,7 +13,6 @@ Current release: **1.2.2**
 - favorites, history, downloads and offline playback
 - lyrics and queue views
 - runtime dependency updates for yt-dlp
-- signed in-app Frxe Desktop update checks and installation
 - system tray integration
 - Ko-fi and GitHub links in Home and About
 
@@ -68,19 +67,6 @@ release-upload/Frxe-Desktop-1.2.2-macos-x64.dmg
 ```
 
 Apple Developer signing and notarization can be configured separately. Without those credentials, macOS may show the normal unidentified-developer warning.
-
-## In-app updates
-
-Frxe Desktop uses signed Tauri updater artifacts published with GitHub Releases. The app checks the canonical release feed at the Frxe Desktop repository and verifies the update signature before installation.
-
-Release builds require these GitHub Actions secrets:
-
-```text
-TAURI_SIGNING_PRIVATE_KEY
-TAURI_SIGNING_PRIVATE_KEY_PASSWORD
-```
-
-The private updater key and password must never be committed. Only the matching public verification key belongs in `src-tauri/tauri.conf.json`.
 
 ## Development
 
