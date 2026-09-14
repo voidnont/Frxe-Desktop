@@ -87,7 +87,8 @@ pub async fn scan_downloads(dir: String) -> Result<Vec<Track>, String> {
 }
 
 #[tauri::command]
-pub async fn clear_removed_downloads(_download_dir: String) -> Result<u32, String> {
+pub async fn clear_removed_downloads(download_dir: String) -> Result<u32, String> {
+    let _ = download_dir;
     Ok(0)
 }
 
