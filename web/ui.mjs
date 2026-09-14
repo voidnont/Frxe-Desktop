@@ -128,11 +128,8 @@ export function createView({
 
   function renderSettings() {
     const status = state.runtimeStatus;
-    const update = state.updateInfo;
-    const progress = state.updateProgress || {};
-    const percent = progress.total ? Math.min(100, Math.round((Number(progress.downloaded || 0) / Number(progress.total)) * 100)) : 0;
     return `<div class="screen settings-screen">
-      <div class="screen-heading"><span class="eyebrow">FRXE</span><h1>Settings</h1><p>Desktop behavior, updates and Frxe runtime tools.</p></div>
+      <div class="screen-heading"><span class="eyebrow">FRXE</span><h1>Settings</h1><p>Desktop behavior and Frxe runtime tools.</p></div>
       <div class="settings-grid">
         <section class="settings-card glass">
           <div class="setting-head"><div><span>OFFLINE</span><h2>Downloads</h2></div>${icon('download', 22)}</div>
@@ -167,19 +164,6 @@ export function createView({
             <span>FFmpeg <b>${escapeHtml(status.ffmpegVersion || 'unknown')}</b></span>
           </div>${status.warnings?.length ? `<div class="runtime-warnings">${status.warnings.map((warning) => `<small>${escapeHtml(warning)}</small>`).join('')}</div>` : ''}` : ''}
           <button class="primary pill" data-action="update-runtime" ${state.runtimeLoading ? 'disabled' : ''}>${state.runtimeLoading ? 'Updating…' : 'Update runtime dependencies'}</button>
-        </section>
-
-        <section class="settings-card glass update-card">
-          <div class="setting-head"><div><span>APP</span><h2>Frxe Updates</h2></div><span class="backend-badge">1.2.2</span></div>
-          <p>Current version <b>1.2.2</b>. Frxe verifies signed updates before installing them.</p>
-          ${state.updateStatus ? `<div class="update-status">${escapeHtml(state.updateStatus)}</div>` : ''}
-          ${update ? `<div class="update-release glass-soft"><b>Version ${escapeHtml(update.version)}</b>${update.date ? `<small>${escapeHtml(update.date)}</small>` : ''}${update.notes ? `<p>${escapeHtml(update.notes)}</p>` : ''}</div>` : ''}
-          ${state.updateInstalling ? `<div class="update-progress"><div class="progress-rail"><i style="width:${percent}%"></i></div><small>${escapeHtml(progress.state || 'Preparing update')}${progress.total ? ` · ${percent}%` : ''}</small></div>` : ''}
-          ${state.updateError ? `<div class="inline-error">${escapeHtml(state.updateError)}</div>` : ''}
-          <div class="update-actions">
-            <button class="secondary pill" data-action="check-update" ${state.updateChecking || state.updateInstalling ? 'disabled' : ''}>${state.updateChecking ? 'Checking…' : 'Check for updates'}</button>
-            ${update ? `<button class="primary pill" data-action="install-update" ${state.updateInstalling ? 'disabled' : ''}>${state.updateInstalling ? 'Updating…' : 'Update now'}</button>` : ''}
-          </div>
         </section>
 
         <section class="settings-card glass about-card">
