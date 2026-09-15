@@ -109,7 +109,10 @@ export function createView({
             : `<button class="icon-button" data-action="cancel-download" data-task="${escapeHtml(task.id)}">${icon('x', 18)}</button>`}
         </div>`).join('')}</div>` : emptyState('No active downloads', 'Save a track from Search, Home or Now Playing.')}
       </section>
-      ${renderSection('Downloaded music', state.offline, { eyebrow: `${state.offline.length} OFFLINE`, emptyTitle: 'Nothing downloaded', emptyBody: 'Saved tracks will appear here automatically.' })}
+      <section class="content-section">
+        <div class="section-title"><div><span>${state.offline.length} OFFLINE</span><h2>Downloaded music</h2></div></div>
+        ${state.offline.length ? `<div class="track-list">${state.offline.map((track) => `<div class="playlist-track-wrap">${trackRow(track, { showDownload: false })}<button class="icon-button danger playlist-remove" data-action="remove-download" data-track="${escapeHtml(trackKey(track))}" aria-label="Remove downloaded file ${escapeHtml(track.title)}">${icon('trash', 17)}</button></div>`).join('')}</div>` : emptyState('Nothing downloaded', 'Saved tracks will appear here automatically.')}
+      </section>
     </div>`;
   }
 
