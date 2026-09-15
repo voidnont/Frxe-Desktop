@@ -169,6 +169,10 @@ export function createView({
           </article>`;
         }).join('')}</div>` : emptyState('No playlists yet', 'Create a playlist, then add tracks from anywhere in Frxe.')}
       </section>
+      <section class="content-section history-section">
+        <div class="section-title"><div><span>${state.history.length} RECENT</span><h2>Recently played</h2></div>${state.history.length ? '<button class="secondary pill" data-action="clear-history">Clear history</button>' : ''}</div>
+        ${state.history.length ? `<div class="track-list">${state.history.slice(0, 50).map((track, index) => `<div class="playlist-track-wrap">${trackRow(track, { index, showDownload: false })}<button class="icon-button playlist-remove" data-action="remove-history" data-track="${escapeHtml(trackKey(track))}" aria-label="Remove ${escapeHtml(track.title)} from history">${icon('x', 17)}</button></div>`).join('')}</div>` : emptyState('No listening history', 'Tracks you play will appear here.')}
+      </section>
       ${renderSection('Your music', combined, { eyebrow: `${combined.length} TRACKS`, emptyTitle: 'Your library is empty', emptyBody: 'Heart a song or download it to start building your library.' })}
     </div>`;
   }
