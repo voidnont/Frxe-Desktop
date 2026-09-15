@@ -59,7 +59,7 @@ pub fn resolve_ytdlp(dir: &Path) -> Result<PathBuf, String> {
     }
     let path_name = if cfg!(target_os = "windows") { "yt-dlp.exe" } else { "yt-dlp" };
     executable_in_path(path_name)
-        .ok_or_else(|| "yt-dlp is unavailable. Open Settings and use Update runtime dependencies first.".to_string())
+        .ok_or_else(|| "yt-dlp is unavailable. Open Settings and use Update yt-dlp first.".to_string())
 }
 
 pub fn resolve_ffmpeg(dir: &Path) -> Option<PathBuf> {
@@ -144,8 +144,9 @@ pub async fn update_runtime_dependencies(app: tauri::AppHandle) -> Result<Runtim
     Ok(status_for_dir(&dir).await)
 }
 
-pub async fn current_runtime_status(app: &tauri::AppHandle) -> Result<RuntimeStatus, String> {
-    let dir = runtime_dir(app)?;
+#[tauri::command]
+pub async fn current_runtime_status(app: tauri::AppHandle) -> Result<RuntimeStatus, String> {
+    let dir = runtime_dir(&app)?;
     Ok(status_for_dir(&dir).await)
 }
 
