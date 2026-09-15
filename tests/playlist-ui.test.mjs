@@ -34,6 +34,11 @@ test('playlist actions mutate persisted local state and play the playlist as the
   assert.match(app, /persistLists\(\)/);
 });
 
+test('reselecting the current song applies the requested queue before toggling playback', () => {
+  const playTrackBody = app.slice(app.indexOf('async function playTrack'), app.indexOf('function pushHistory'));
+  assert.match(playTrackBody, /if \(same && audio\.src\) \{\s*if \(queue\) \{/);
+});
+
 test('playlist surfaces have dedicated responsive styling', () => {
   for (const selector of ['.playlist-grid', '.playlist-card', '.playlist-detail', '.playlist-picker-overlay']) {
     assert.match(styles, new RegExp(selector.replace('.', '\\.')));
