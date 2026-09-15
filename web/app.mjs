@@ -8,6 +8,7 @@ import {
   parseLrc,
   queuePrefetchTracks,
   safeJsonParse,
+  selectPlaybackQueue,
   trackKey,
 } from './core.mjs';
 import { createBackend } from './backend.mjs';
@@ -400,8 +401,8 @@ app.addEventListener('click', async (event) => {
   switch (button.dataset.action) {
     case 'play-track': {
       const sourceList = state.tab === 'search' ? state.searchResults : state.tab === 'library' ? [...state.favorites, ...state.offline] : state.tab === 'save' ? state.offline : state.history.length ? state.history : [track];
-      const idx = Math.max(0, sourceList.findIndex((item) => trackKey(item) === trackKey(track)));
-      await playTrack(track, sourceList, idx);
+      const selection = selectPlaybackQueue(track, sourceList);
+      await playTrack(track, selection.queue, selection.index);
       break;
     }
     case 'toggle-play': await togglePlay(); break;

@@ -27,6 +27,14 @@ export function dedupeTracks(groups) {
   return output;
 }
 
+export function selectPlaybackQueue(track, candidates = []) {
+  if (!track) return { queue: [], index: -1 };
+  const queue = Array.isArray(candidates) ? candidates : [];
+  const index = queue.findIndex((item) => trackKey(item) === trackKey(track));
+  if (index >= 0) return { queue: [...queue], index };
+  return { queue: [track], index: 0 };
+}
+
 export function queuePrefetchTracks(queue, index, distance = 2) {
   if (!Array.isArray(queue) || !queue.length || !Number.isInteger(index)) return [];
   const output = [];
