@@ -78,6 +78,10 @@ export function createBackend({ invoke, listen = null, convertFileSrc = (path) =
       });
     },
 
+    currentRuntimeStatus() {
+      return invoke('current_runtime_status');
+    },
+
     updateRuntimeDependencies() {
       return invoke('update_runtime_dependencies');
     },
