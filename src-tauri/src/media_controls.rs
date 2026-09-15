@@ -1,3 +1,127 @@
+use playwire::{Capabilities, Event, PlaybackState, Repeat, Track};
+use serde::Deserialize;
+use serde_json::{json, Value};
+use std::time::Duration;
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MediaPlaybackSnapshot {
+    pub track_id: Option<String>,
+    pub title: Option<String>,
+    pub artist: Option<String>,
+    pub album: Option<String>,
+    pub artwork: String,
+    pub duration_seconds: Option<f64>,
+    pub position_seconds: f64,
+    pub playing: bool,
+    pub volume: f64,
+    pub shuffle: bool,
+    pub repeat: String,
+    pub can_next: bool,
+    pub can_previous: bool,
+    pub can_seek: bool,
+}
+
+fn finite_non_negative(value: f64) -> f64 {
+    if value.is_finite() {
+        value.max(0.0)
+    } else {
+        0.0
+    }
+}
+
+fn repeat_mode(value: &str) -> Repeat {
+    match value {
+        "track" => Repeat::One,
+        "queue" => Repeat::All,
+        _ => Repeat::Off,
+    }
+}
+
+pub fn snapshot_to_playwire(snapshot: &MediaPlaybackSnapshot) -> PlaybackState {
+    let duration_seconds = snapshot
+        .duration_seconds
+        .filter(|value| value.is_finite() && *value > 0.0);
+    let duration = duration_seconds.map(Duration::from_secs_f64);
+    let mut position_seconds = finite_non_negative(snapshot.position_seconds);
+    if let Some(maximum) = duration_seconds {
+        position_seconds = position_seconds.min(maximum);
+    }
+
+    let track = snapshot.track_id.as_ref().map(|id| Track {
+        id: id.clone(),
+        title: snapshot.title.clone().unwrap_or_default(),
+        artists: snapshot
+            .artist
+            .clone()
+            .filter(|artist| !artist.is_empty())
+            .into_iter()
+            .collect(),
+        album: snapshot.album.clone().unwrap_or_default(),
+        artwork_url: snapshot.artwork.clone(),
+        url: String::new(),
+    });
+    let has_track = track.is_some();
+
+    PlaybackState {
+        track,
+        playing: has_track && snapshot.playing,
+        position: Duration::from_secs_f64(position_seconds),
+        duration,
+        volume: if snapshot.volume.is_finite() {
+            snapshot.volume.clamp(0.0, 1.0)
+        } else {
+            0.0
+        },
+        repeat: repeat_mode(&snapshot.repeat),
+        shuffle: snapshot.shuffle,
+        capabilities: Capabilities {
+            can_go_next: has_track && snapshot.can_next,
+            can_go_previous: has_track && snapshot.can_previous,
+            can_seek: has_track && snapshot.can_seek,
+        },
+    }
+}
+
+pub fn event_payload(event: Event) -> Option<Value> {
+    match event {
+        Event::Play => Some(json!({ "action": "play" })),
+        Event::Pause => Some(json!({ "action": "pause" })),
+        Event::PlayPause => Some(json!({ "action": "toggle-play" })),
+        Event::Stop => Some(json!({ "action": "stop" })),
+        Event::Next => Some(json!({ "action": "next" })),
+        Event::Previous => Some(json!({ "action": "previous" })),
+        Event::SeekTo(position) => Some(json!({
+            "action": "seek-to",
+            "positionSeconds": position.as_secs_f64()
+        })),
+        Event::SeekBy(offset) => Some(json!({
+            "action": "seek-by",
+            "offsetSeconds": offset
+        })),
+        Event::SetVolume(volume) => Some(json!({
+            "action": "set-volume",
+            "volume": volume
+        })),
+        Event::SetShuffle(enabled) => Some(json!({
+            "action": "set-shuffle",
+            "enabled": enabled
+        })),
+        Event::SetRepeat(mode) => Some(json!({
+            "action": "set-repeat",
+            "mode": match mode {
+                Repeat::One => "track",
+                Repeat::All => "queue",
+                Repeat::Off => "off",
+            }
+        })),
+        Event::OpenUri(_) => None,
+        Event::Raise => Some(json!({ "action": "raise" })),
+        Event::Quit => Some(json!({ "action": "quit" })),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
