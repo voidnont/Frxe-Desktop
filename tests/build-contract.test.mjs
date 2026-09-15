@@ -170,3 +170,18 @@ test('platform CI packages the exact Windows Linux and macOS 1.2.4 names', async
   assert.match(macWorkflow, /Frxe-Desktop-1\.2\.4-macos-arm64\.dmg/);
   assert.match(macWorkflow, /Frxe-Desktop-1\.2\.4-macos-x64\.dmg/);
 });
+
+test('release PRs can verify platform packages without replacing manual dispatch', async () => {
+  const workflows = await Promise.all([
+    read('.github/workflows/windows-msi.yml'),
+    read('.github/workflows/linux-packages.yml'),
+    read('.github/workflows/macos-dmg.yml'),
+  ]);
+
+  for (const workflow of workflows) {
+    assert.match(workflow, /workflow_dispatch\s*:/);
+    assert.match(workflow, /pull_request\s*:/);
+    assert.match(workflow, /startsWith\(github\.head_ref,\s*['"]v['"]\)/);
+    assert.match(workflow, /github\.event_name\s*==\s*['"]workflow_dispatch['"]/);
+  }
+});
