@@ -11,6 +11,7 @@ import {
   parseLrc,
   queuePrefetchTracks,
   removeTrackFromPlaylist,
+  removeTrackReferences,
   safeJsonParse,
   selectPlaybackQueue,
   trackKey,
@@ -322,6 +323,58 @@ async function refreshOffline() {
   }
 }
 
+async function removeOfflineTrack(target) {
+  if (!target?.path || target.kind !== 'local') return;
+  try {
+    await backend.removeDownload(target.path, state.prefs.downloadDir);
+    const removedKey = trackKey(target);
+    const cleaned = removeTrackReferences({
+      queue: state.queue,
+      favorites: state.favorites,
+      history: state.history,
+      playlists: state.playlists,
+    }, target);
+
+    state.queue = cleaned.queue;
+    state.favorites = cleaned.favorites;
+    state.history = cleaned.history;
+    state.playlists = cleaned.playlists;
+    state.offline = state.offline.filter((item) => trackKey(item) !== removedKey);
+    sourceCache.clear(target);
+
+    if (trackKey(state.current) === removedKey) {
+      playbackRequestId += 1;
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+      state.current = null;
+      state.queueIndex = -1;
+      state.playerOpen = false;
+      state.playing = false;
+      state.resolving = false;
+      updateAmbient(null);
+      if ('mediaSession' in navigator) navigator.mediaSession.metadata = null;
+    } else if (state.current) {
+      const currentIndex = state.queue.findIndex((item) => trackKey(item) === trackKey(state.current));
+      if (currentIndex >= 0) state.queueIndex = currentIndex;
+      else {
+        state.queue = [state.current];
+        state.queueIndex = 0;
+      }
+    } else {
+      state.queueIndex = -1;
+    }
+
+    persistLists();
+    saveSession();
+    await refreshOffline();
+    render();
+    toast(`Removed ${target.title}`);
+  } catch (error) {
+    toast(`Could not remove ${target.title}: ${readableError(error)}`, 'error');
+  }
+}
+
 async function loadLyrics(track) {
   const key = trackKey(track);
   if (!track || state.lyricsTrackKey === key || state.lyricsLoading) return;
@@ -465,6 +518,7 @@ app.addEventListener('click', async (event) => {
     case 'previous': await goPrevious(); break;
     case 'favorite': toggleFavorite(track || state.current); break;
     case 'download': await queueDownload(track || state.current); break;
+    case 'remove-download': await removeOfflineTrack(track); break;
     case 'playlist-picker': {
       const target = track || state.current;
       if (!target) break;
