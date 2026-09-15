@@ -23,6 +23,7 @@ test('runtime settings distinguish managed yt-dlp from detected system tools', a
   assert.match(backend, /currentRuntimeStatus\(\)[\s\S]*invoke\('current_runtime_status'\)/);
   assert.match(lib, /runtime::current_runtime_status/);
   assert.match(app, /state\.runtimeStatus\s*=\s*await backend\.currentRuntimeStatus\(\)/);
-  assert.match(runtime, /pub async fn current_runtime_status/);
+  assert.match(app, /yt-dlp updated/);
+  assert.match(runtime, /#\[tauri::command\][\s\S]*pub async fn current_runtime_status/);
   assert.doesNotMatch(runtime, /Update runtime dependencies first/);
 });
