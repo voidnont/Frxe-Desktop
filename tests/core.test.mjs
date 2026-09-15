@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import * as core from '../web/core.mjs';
 import {
   DEFAULT_PREFERENCES,
   createTrackSourceCache,
@@ -41,6 +42,11 @@ test('nextQueueIndex handles sequential, repeat-track and repeat-queue playback'
   assert.equal(nextQueueIndex({ index: 2, length: 3, repeat: 'off', shuffle: false }), -1);
   assert.equal(nextQueueIndex({ index: 1, length: 3, repeat: 'track', shuffle: false }), 1);
   assert.equal(nextQueueIndex({ index: 2, length: 3, repeat: 'queue', shuffle: false }), 0);
+});
+
+test('queue selection falls back to the clicked track when candidates omit it', () => {
+  assert.equal(typeof core.selectPlaybackQueue, 'function', 'selectPlaybackQueue must exist');
+  assert.deepEqual(core.selectPlaybackQueue(c, [a, b]), { queue: [c], index: 0 });
 });
 
 test('queuePrefetchTracks warms nearby previous and next tracks', () => {
