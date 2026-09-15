@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - cleanup/v1.2.2-final
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout Frxe Desktop
+        uses: actions/checkout@v4
+
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend tooling
+        run: npm install
+
+      - name: Verify frontend and contracts
+        run: npm run check
+
+      - name: Generate app icons
+        run: npm run icons
+
+      - name: Run native tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Check native build
+        run: cargo check --manifest-path src-tauri/Cargo.toml
