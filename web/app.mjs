@@ -137,6 +137,12 @@ async function playTrack(track, queue = null, index = null) {
   if (!track) return;
   const same = trackKey(track) === trackKey(state.current);
   if (same && audio.src) {
+    if (queue) {
+      state.queue = [...queue];
+      state.queueIndex = index ?? Math.max(0, state.queue.findIndex((item) => trackKey(item) === trackKey(track)));
+      prefetchQueueSources();
+      saveSession();
+    }
     if (audio.paused) await audio.play().catch((error) => toast(readableError(error), 'error'));
     else audio.pause();
     return;
