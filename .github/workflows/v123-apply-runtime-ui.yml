@@ -54,19 +54,9 @@ jobs:
           if old_update not in app:
               raise SystemExit('updateRuntime block not found')
           app = app.replace(old_update, new_update, 1)
-          tray_block = """  try {
-            await backend.setTrayEnabled(state.prefs.trayEnabled);
-          } catch {}
-          try {
-            downloadUnlisten = await backend.onDownloadProgress"""
-          status_block = """  try {
-            await backend.setTrayEnabled(state.prefs.trayEnabled);
-          } catch {}
-          try {
-            state.runtimeStatus = await backend.currentRuntimeStatus();
-          } catch {}
-          try {
-            downloadUnlisten = await backend.onDownloadProgress"""
+
+          tray_block = "  try {\n    await backend.setTrayEnabled(state.prefs.trayEnabled);\n  } catch {}\n  try {\n    downloadUnlisten = await backend.onDownloadProgress"
+          status_block = "  try {\n    await backend.setTrayEnabled(state.prefs.trayEnabled);\n  } catch {}\n  try {\n    state.runtimeStatus = await backend.currentRuntimeStatus();\n  } catch {}\n  try {\n    downloadUnlisten = await backend.onDownloadProgress"
           if tray_block not in app:
               raise SystemExit('tray startup block not found')
           app = app.replace(tray_block, status_block, 1)
