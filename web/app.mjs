@@ -488,6 +488,9 @@ async function initialize() {
     }
   } catch {}
   try {
+    await backend.setTrayEnabled(state.prefs.trayEnabled);
+  } catch {}
+  try {
     downloadUnlisten = await backend.onDownloadProgress((payload) => {
       const task = state.downloads.find((item) => item.id === payload.task_id);
       if (!task) return;

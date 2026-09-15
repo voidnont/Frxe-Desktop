@@ -7,6 +7,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
   shuffle: false,
   repeat: 'off',
   reducedMotion: false,
+  trayEnabled: true,
 });
 
 export function trackKey(track) {
@@ -118,6 +119,7 @@ export function normalizePreferences(raw = {}, detectedDownloadDir = '') {
   if (!['mp3', 'm4a', 'flac', 'wav'].includes(next.format)) next.format = DEFAULT_PREFERENCES.format;
   if (!['best', 'high', 'balanced'].includes(next.quality)) next.quality = DEFAULT_PREFERENCES.quality;
   if (!['off', 'queue', 'track'].includes(next.repeat)) next.repeat = DEFAULT_PREFERENCES.repeat;
+  next.trayEnabled = next.trayEnabled !== false;
   next.muted = Boolean(next.muted);
   next.shuffle = Boolean(next.shuffle);
   return next;
