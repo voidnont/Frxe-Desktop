@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const core = await import('../web/core.mjs');
-const [appSource, uiSource] = await Promise.all([
+const [appSource, uiSource, primitivesSource] = await Promise.all([
   readFile(new URL('../web/app.mjs', import.meta.url), 'utf8'),
   readFile(new URL('../web/ui.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../web/ui-primitives.mjs', import.meta.url), 'utf8'),
 ]);
 
 const localTrack = { kind: 'local', id: '/music/song.mp3', path: '/music/song.mp3', title: 'Song' };
@@ -44,9 +45,9 @@ test('Library history can remove one track or clear all recent playback', () => 
   assert.match(uiSource, /<h2>Recently played<\/h2>/);
   assert.match(uiSource, /data-action="remove-history"/);
   assert.match(uiSource, /data-action="clear-history"/);
-  assert.match(appSource, /case 'remove-history'/);
-  assert.match(appSource, /case 'clear-history'/);
-  assert.match(appSource, /state\.history = state\.history\.filter/);
-  assert.match(appSource, /state\.history = \[\]/);
-  assert.match(appSource, /persistLists\(\)/);
+  assert.match(primitivesSource, /action !== 'remove-history' && action !== 'clear-history'/);
+  assert.match(primitivesSource, /state\.history = state\.history\.filter/);
+  assert.match(primitivesSource, /state\.history = \[\]/);
+  assert.match(primitivesSource, /frxe\.desktop\.history\.v1/);
+  assert.match(primitivesSource, /localStorage\.setItem\(historyKey/);
 });
