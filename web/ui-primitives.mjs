@@ -32,6 +32,7 @@ export function createPrimitives({ state, ambient, toastHost, convertFileSrc, tr
       repeat: '<path d="M17 5l3 3-3 3"/><path d="M4 11V9a2 2 0 0 1 2-2h14M7 19l-3-3 3-3"/><path d="M20 13v2a2 2 0 0 1-2 2H4"/>',
       queue: '<path d="M4 6h12M4 12h10M4 18h8"/><path d="m17 15 4 3-4 3z"/>',
       lyrics: '<path d="M9 4v11.5a3 3 0 1 1-2-2.8V6l11-2v9.5a3 3 0 1 1-2-2.8V4.4z"/>',
+      plus: '<path d="M12 5v14M5 12h14"/>',
       x: '<path d="m6 6 12 12M18 6 6 18"/>',
       trash: '<path d="M4 7h16M9 7V4h6v3m-9 0 1 14h10l1-14M10 11v6M14 11v6"/>',
     };
@@ -84,6 +85,7 @@ export function createPrimitives({ state, ambient, toastHost, convertFileSrc, tr
       </button>
       <div class="row-actions">
         <button class="icon-button ${isFavorite(track) ? 'active' : ''}" data-action="favorite" data-track="${escapeHtml(key)}" aria-label="Favorite">${icon('heart', 18)}</button>
+        <button class="icon-button" data-action="playlist-picker" data-track="${escapeHtml(key)}" aria-label="Add to playlist">${icon('plus', 18)}</button>
         ${showDownload && track.kind === 'youtube' ? `<button class="icon-button" data-action="download" data-track="${escapeHtml(key)}" aria-label="Download">${icon('download', 18)}</button>` : ''}
       </div>
     </article>`;

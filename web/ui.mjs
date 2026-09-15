@@ -21,6 +21,7 @@ export function createView({
     isFavorite,
     toast,
     updateAmbient,
+    trackRow,
     emptyState,
     renderSection,
   } = createPrimitives({ state, ambient, toastHost, convertFileSrc, trackRegistry });
@@ -112,16 +113,59 @@ export function createView({
     </div>`;
   }
 
+  function renderPlaylistDetail(playlist) {
+    const tracks = Array.isArray(playlist.tracks) ? playlist.tracks : [];
+    registerTracks(tracks);
+    return `<div class="screen library-screen playlist-detail">
+      <div class="playlist-detail-head">
+        <button class="secondary pill" data-action="back-playlists">${icon('prev', 17)} All playlists</button>
+        <div class="playlist-detail-copy"><span class="eyebrow">PLAYLIST</span><h1>${escapeHtml(playlist.name)}</h1><p>${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'} · stored locally on this device.</p></div>
+        <div class="playlist-detail-actions">
+          <button class="primary pill" data-action="play-playlist" data-playlist="${escapeHtml(playlist.id)}" ${tracks.length ? '' : 'disabled'}>${icon('play', 17)} Play</button>
+          <button class="icon-button danger" data-action="delete-playlist" data-playlist="${escapeHtml(playlist.id)}" aria-label="Delete playlist">${icon('trash', 18)}</button>
+        </div>
+      </div>
+      <section class="content-section">
+        <div class="section-title"><div><span>${tracks.length} TRACKS</span><h2>Playlist tracks</h2></div></div>
+        ${tracks.length ? `<div class="playlist-track-list">${tracks.map((track, index) => `<div class="playlist-track-wrap">${trackRow(track, { index, showDownload: false })}<button class="icon-button playlist-remove" data-action="remove-from-playlist" data-playlist="${escapeHtml(playlist.id)}" data-track="${escapeHtml(trackKey(track))}" aria-label="Remove ${escapeHtml(track.title)} from playlist">${icon('x', 17)}</button></div>`).join('')}</div>` : emptyState('This playlist is empty', 'Add tracks from Search, Home, Library or Now Playing.')}
+      </section>
+    </div>`;
+  }
+
   function renderLibrary() {
+    const activePlaylist = state.playlists.find((playlist) => playlist?.id === state.activePlaylistId);
+    if (activePlaylist) return renderPlaylistDetail(activePlaylist);
+
     const favoriteKeys = new Set(state.favorites.map(trackKey));
     const combined = [...state.favorites, ...state.offline.filter((track) => !favoriteKeys.has(trackKey(track)))];
     return `<div class="screen library-screen">
-      <div class="screen-heading"><span class="eyebrow">COLLECTION</span><h1>Library</h1><p>Favorites and local downloads in one place.</p></div>
+      <div class="screen-heading"><span class="eyebrow">COLLECTION</span><h1>Library</h1><p>Favorites, downloads and your local playlists in one place.</p></div>
       <div class="library-stats">
         <div class="stat glass-soft"><b>${state.favorites.length}</b><span>Favorites</span></div>
         <div class="stat glass-soft"><b>${state.offline.length}</b><span>Offline</span></div>
+        <div class="stat glass-soft"><b>${state.playlists.length}</b><span>Playlists</span></div>
         <div class="stat glass-soft"><b>${state.history.length}</b><span>Recent</span></div>
       </div>
+      <section class="content-section playlist-section">
+        <div class="section-title"><div><span>LOCAL</span><h2>Playlists</h2></div></div>
+        <form id="playlist-create-form" class="playlist-create glass-soft" autocomplete="off">
+          <input id="playlist-name" maxlength="80" placeholder="New playlist name" aria-label="New playlist name" />
+          <button class="primary pill" type="submit">${icon('plus', 17)} Create playlist</button>
+        </form>
+        ${state.playlists.length ? `<div class="playlist-grid">${state.playlists.map((playlist) => {
+          const tracks = Array.isArray(playlist.tracks) ? playlist.tracks : [];
+          return `<article class="playlist-card glass-soft">
+            <button class="playlist-card-main" data-action="open-playlist" data-playlist="${escapeHtml(playlist.id)}">
+              ${artwork(tracks[0] || { title: playlist.name }, 'playlist-art')}
+              <span><strong>${escapeHtml(playlist.name)}</strong><small>${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'}</small></span>
+            </button>
+            <div class="playlist-card-actions">
+              <button class="icon-button" data-action="play-playlist" data-playlist="${escapeHtml(playlist.id)}" aria-label="Play ${escapeHtml(playlist.name)}" ${tracks.length ? '' : 'disabled'}>${icon('play', 17)}</button>
+              <button class="icon-button danger" data-action="delete-playlist" data-playlist="${escapeHtml(playlist.id)}" aria-label="Delete ${escapeHtml(playlist.name)}">${icon('trash', 17)}</button>
+            </div>
+          </article>`;
+        }).join('')}</div>` : emptyState('No playlists yet', 'Create a playlist, then add tracks from anywhere in Frxe.')}
+      </section>
       ${renderSection('Your music', combined, { eyebrow: `${combined.length} TRACKS`, emptyTitle: 'Your library is empty', emptyBody: 'Heart a song or download it to start building your library.' })}
     </div>`;
   }
@@ -187,6 +231,7 @@ export function createView({
       <button class="mini-main" data-action="open-player">${artwork(track, 'mini-art')}<span><strong>${escapeHtml(track.title)}</strong><small>${escapeHtml(track.artist || 'Unknown artist')}</small></span></button>
       <div class="mini-actions">
         <button class="icon-button ${isFavorite(track) ? 'active' : ''}" data-action="favorite" data-track="${escapeHtml(trackKey(track))}">${icon('heart', 18)}</button>
+        <button class="icon-button" data-action="playlist-picker" data-track="${escapeHtml(trackKey(track))}" aria-label="Add to playlist">${icon('plus', 18)}</button>
         ${track.kind === 'youtube' ? `<button class="icon-button" data-action="download" data-track="${escapeHtml(trackKey(track))}">${icon('download', 18)}</button>` : ''}
         <button class="play-button small" data-action="toggle-play" aria-label="${state.playing ? 'Pause' : 'Play'}">${icon(state.playing ? 'pause' : 'play', 20)}</button>
       </div>
@@ -223,6 +268,7 @@ export function createView({
           </div>
           <div class="player-secondary">
             <button class="icon-button ${isFavorite(track) ? 'active' : ''}" data-action="favorite" data-track="${escapeHtml(trackKey(track))}">${icon('heart', 20)}</button>
+            <button class="icon-button" data-action="playlist-picker" data-track="${escapeHtml(trackKey(track))}" aria-label="Add to playlist">${icon('plus', 20)}</button>
             ${track.kind === 'youtube' ? `<button class="icon-button" data-action="download" data-track="${escapeHtml(trackKey(track))}">${icon('download', 20)}</button>` : ''}
             <div class="volume">${icon('queue', 18)}<input id="volume" type="range" min="0" max="1" step="0.01" value="${state.prefs.muted ? 0 : state.prefs.volume}" aria-label="Volume"/></div>
           </div>
@@ -245,6 +291,22 @@ export function createView({
     </div>`;
   }
 
+  function renderPlaylistPicker() {
+    if (!state.playlistPickerTrackKey) return '';
+    const track = trackRegistry.get(state.playlistPickerTrackKey) || (trackKey(state.current) === state.playlistPickerTrackKey ? state.current : null);
+    return `<div class="playlist-picker-overlay" role="dialog" aria-modal="true" aria-label="Add to playlist">
+      <button class="playlist-picker-backdrop" data-action="close-playlist-picker" aria-label="Close playlist picker"></button>
+      <section class="playlist-picker-panel glass">
+        <div class="playlist-picker-head"><div><span class="eyebrow">ADD TO PLAYLIST</span><h2>${escapeHtml(track?.title || 'Track')}</h2></div><button class="icon-button" data-action="close-playlist-picker" aria-label="Close">${icon('x', 18)}</button></div>
+        ${state.playlists.length ? `<div class="playlist-picker-list">${state.playlists.map((playlist) => {
+          const tracks = Array.isArray(playlist.tracks) ? playlist.tracks : [];
+          const alreadyAdded = track ? tracks.some((item) => trackKey(item) === trackKey(track)) : false;
+          return `<button class="playlist-picker-item" data-action="add-to-playlist" data-playlist="${escapeHtml(playlist.id)}" ${alreadyAdded ? 'disabled' : ''}><span>${escapeHtml(playlist.name)}</span><small>${alreadyAdded ? 'Already added' : `${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'}`}</small>${icon(alreadyAdded ? 'heart' : 'plus', 17)}</button>`;
+        }).join('')}</div>` : `<div class="playlist-picker-empty">Create a playlist in Library first.</div>`}
+      </section>
+    </div>`;
+  }
+
   function render() {
     trackRegistry.clear();
     const content = state.playerOpen
@@ -259,7 +321,7 @@ export function createView({
               ? renderSettings()
               : renderHome();
 
-    app.innerHTML = `<div class="content-frame">${content}</div>${miniPlayer()}${!state.playerOpen ? `<nav class="bottom-nav glass" aria-label="Primary navigation">${navItem('home', 'home', 'Home')}${navItem('search', 'search', 'Search')}${navItem('save', 'save', 'Save')}${navItem('library', 'library', 'Library')}${navItem('settings', 'settings', 'Settings')}</nav>` : ''}`;
+    app.innerHTML = `<div class="content-frame">${content}</div>${miniPlayer()}${renderPlaylistPicker()}${!state.playerOpen ? `<nav class="bottom-nav glass" aria-label="Primary navigation">${navItem('home', 'home', 'Home')}${navItem('search', 'search', 'Search')}${navItem('save', 'save', 'Save')}${navItem('library', 'library', 'Library')}${navItem('settings', 'settings', 'Settings')}</nav>` : ''}`;
     bindFormControls();
     actions.syncPlayerUi();
   }
@@ -272,6 +334,11 @@ export function createView({
 
     document.querySelector('#search-input')?.addEventListener('input', (event) => {
       state.searchQuery = event.target.value;
+    });
+
+    document.querySelector('#playlist-create-form')?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      actions.createLocalPlaylist(document.querySelector('#playlist-name')?.value || '');
     });
 
     document.querySelector('#download-dir')?.addEventListener('change', (event) => {

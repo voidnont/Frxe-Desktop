@@ -1,12 +1,16 @@
 import {
   DEFAULT_PREFERENCES,
+  addTrackToPlaylist,
+  createPlaylist,
   createTrackSourceCache,
   currentLyricIndex,
+  deletePlaylist,
   formatClock,
   nextQueueIndex,
   normalizePreferences,
   parseLrc,
   queuePrefetchTracks,
+  removeTrackFromPlaylist,
   safeJsonParse,
   selectPlaybackQueue,
   trackKey,
@@ -53,6 +57,8 @@ const state = {
   favorites: loadArray(KEYS.favorites),
   history: loadArray(KEYS.history),
   playlists: loadArray(KEYS.playlists),
+  activePlaylistId: null,
+  playlistPickerTrackKey: '',
   prefs: normalizePreferences(safeJsonParse(localStorage.getItem(KEYS.prefs) || '{}', {})),
   lyrics: [],
   plainLyrics: '',
@@ -83,7 +89,7 @@ function persistLists() {
 
 const { render, toast, updateAmbient, isFavorite } = createView({
   state, app, audio, ambient, toastHost, backend, convertFileSrc, trackRegistry, savePrefs, persistLists,
-  actions: { performSearch, refreshOffline, syncPlayerUi },
+  actions: { performSearch, refreshOffline, syncPlayerUi, createLocalPlaylist },
 });
 
 async function performSearch(query) {
@@ -222,6 +228,43 @@ function toggleFavorite(track) {
   const key = trackKey(track);
   if (isFavorite(track)) state.favorites = state.favorites.filter((item) => trackKey(item) !== key);
   else state.favorites = [track, ...state.favorites.filter((item) => trackKey(item) !== key)];
+  persistLists();
+  render();
+}
+
+function playlistById(playlistId) {
+  return state.playlists.find((playlist) => playlist?.id === playlistId) || null;
+}
+
+function findTrackByKey(key) {
+  if (!key) return null;
+  const groups = [
+    state.current ? [state.current] : [],
+    state.queue,
+    state.searchResults,
+    state.favorites,
+    state.history,
+    state.offline,
+    ...state.playlists.map((playlist) => Array.isArray(playlist?.tracks) ? playlist.tracks : []),
+  ];
+  for (const group of groups) {
+    const found = group.find((item) => trackKey(item) === key);
+    if (found) return found;
+  }
+  return null;
+}
+
+function createLocalPlaylist(name) {
+  const cleanName = String(name || '').trim();
+  if (!cleanName) {
+    toast('Give the playlist a name.', 'error');
+    return;
+  }
+  const id = globalThis.crypto?.randomUUID?.() || `playlist-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const next = createPlaylist(state.playlists, cleanName, id);
+  if (next.length === state.playlists.length) return;
+  state.playlists = next;
+  state.activePlaylistId = id;
   persistLists();
   render();
 }
@@ -390,6 +433,7 @@ app.addEventListener('click', async (event) => {
   if (tabButton) {
     state.tab = tabButton.dataset.tab;
     state.playerOpen = false;
+    state.playlistPickerTrackKey = '';
     render();
     if (state.tab === 'save' || state.tab === 'library') void refreshOffline();
     if (state.tab === 'search') setTimeout(() => document.querySelector('#search-input')?.focus(), 40);
@@ -402,18 +446,67 @@ app.addEventListener('click', async (event) => {
   const track = button.dataset.track ? trackRegistry.get(button.dataset.track) : null;
   switch (button.dataset.action) {
     case 'play-track': {
-      const sourceList = state.tab === 'search' ? state.searchResults : state.tab === 'library' ? [...state.favorites, ...state.offline] : state.tab === 'save' ? state.offline : state.history.length ? state.history : [track];
+      const activePlaylist = state.tab === 'library' ? playlistById(state.activePlaylistId) : null;
+      const sourceList = state.tab === 'search' ? state.searchResults : state.tab === 'library' && activePlaylist ? activePlaylist.tracks : state.tab === 'library' ? [...state.favorites, ...state.offline] : state.tab === 'save' ? state.offline : state.history.length ? state.history : [track];
       const selection = selectPlaybackQueue(track, sourceList);
       await playTrack(track, selection.queue, selection.index);
       break;
     }
     case 'toggle-play': await togglePlay(); break;
-    case 'open-player': state.playerOpen = true; await loadLyrics(state.current); render(); break;
+    case 'open-player': state.playerOpen = true; state.playlistPickerTrackKey = ''; await loadLyrics(state.current); render(); break;
     case 'close-player': state.playerOpen = false; render(); break;
     case 'next': await goNext(); break;
     case 'previous': await goPrevious(); break;
     case 'favorite': toggleFavorite(track || state.current); break;
     case 'download': await queueDownload(track || state.current); break;
+    case 'playlist-picker': {
+      const target = track || state.current;
+      if (!target) break;
+      state.playlistPickerTrackKey = trackKey(target);
+      render();
+      break;
+    }
+    case 'close-playlist-picker': state.playlistPickerTrackKey = ''; render(); break;
+    case 'add-to-playlist': {
+      const target = findTrackByKey(state.playlistPickerTrackKey);
+      const playlist = playlistById(button.dataset.playlist);
+      if (!target || !playlist) { state.playlistPickerTrackKey = ''; render(); break; }
+      const before = Array.isArray(playlist.tracks) ? playlist.tracks.length : 0;
+      state.playlists = addTrackToPlaylist(state.playlists, playlist.id, target);
+      const after = playlistById(playlist.id)?.tracks?.length || 0;
+      state.playlistPickerTrackKey = '';
+      persistLists();
+      render();
+      toast(after > before ? `Added to ${playlist.name}` : `Already in ${playlist.name}`);
+      break;
+    }
+    case 'open-playlist': state.activePlaylistId = button.dataset.playlist || null; render(); break;
+    case 'back-playlists': state.activePlaylistId = null; render(); break;
+    case 'play-playlist': {
+      const playlist = playlistById(button.dataset.playlist);
+      if (!playlist?.tracks?.length) { toast('This playlist is empty.'); break; }
+      await playTrack(playlist.tracks[0], playlist.tracks, 0);
+      break;
+    }
+    case 'delete-playlist': {
+      const playlist = playlistById(button.dataset.playlist);
+      if (!playlist) break;
+      state.playlists = deletePlaylist(state.playlists, playlist.id);
+      if (state.activePlaylistId === playlist.id) state.activePlaylistId = null;
+      persistLists();
+      render();
+      toast(`Deleted ${playlist.name}`);
+      break;
+    }
+    case 'remove-from-playlist': {
+      const playlist = playlistById(button.dataset.playlist);
+      const target = track || findTrackByKey(button.dataset.track);
+      if (!playlist || !target) break;
+      state.playlists = removeTrackFromPlaylist(state.playlists, playlist.id, target);
+      persistLists();
+      render();
+      break;
+    }
     case 'clear-search': state.searchQuery = ''; state.searchResults = []; state.searchError = ''; render(); setTimeout(() => document.querySelector('#search-input')?.focus(), 0); break;
     case 'retry-search': await performSearch(state.searchQuery); break;
     case 'shuffle': state.prefs.shuffle = !state.prefs.shuffle; savePrefs(); render(); break;
@@ -449,10 +542,11 @@ audio.addEventListener('error', () => {
 window.addEventListener('keydown', (event) => {
   const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
   if (event.ctrlKey && event.key.toLowerCase() === 'f') {
-    event.preventDefault(); state.tab = 'search'; state.playerOpen = false; render(); setTimeout(() => document.querySelector('#search-input')?.focus(), 30); return;
+    event.preventDefault(); state.tab = 'search'; state.playerOpen = false; state.playlistPickerTrackKey = ''; render(); setTimeout(() => document.querySelector('#search-input')?.focus(), 30); return;
   }
   if (typing) return;
   if (event.code === 'Space') { event.preventDefault(); void togglePlay(); }
+  if (event.key === 'Escape' && state.playlistPickerTrackKey) { state.playlistPickerTrackKey = ''; render(); return; }
   if (event.key === 'Escape' && state.playerOpen) { state.playerOpen = false; render(); }
   if (event.altKey && event.key === 'ArrowRight') void goNext();
   if (event.altKey && event.key === 'ArrowLeft') void goPrevious();
