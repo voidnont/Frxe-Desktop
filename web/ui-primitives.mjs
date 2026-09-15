@@ -1,6 +1,31 @@
 import { trackKey } from './core.mjs';
 export function createPrimitives({ state, ambient, toastHost, convertFileSrc, trackRegistry }) {
   let toastTimer = null;
+  const historyKey = 'frxe.desktop.history.v1';
+  const appRoot = document.querySelector('#app');
+
+  if (appRoot && appRoot.dataset.historyActionsBound !== '1') {
+    appRoot.dataset.historyActionsBound = '1';
+    appRoot.addEventListener('click', (event) => {
+      const node = event.target instanceof Element ? event.target : null;
+      const button = node?.closest('[data-action]');
+      const action = button?.dataset.action;
+      if (action !== 'remove-history' && action !== 'clear-history') return;
+
+      if (action === 'remove-history') {
+        const key = button.dataset.track || '';
+        state.history = state.history.filter((item) => trackKey(item) !== key);
+      } else {
+        state.history = [];
+      }
+
+      localStorage.setItem(historyKey, JSON.stringify(state.history.slice(0, 120)));
+      queueMicrotask(() => {
+        document.querySelector(`[data-tab="${state.tab}"]`)?.click();
+      });
+    });
+  }
+
   function escapeHtml(value) {
     return String(value ?? '')
       .replaceAll('&', '&amp;')
