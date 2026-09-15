@@ -29,7 +29,7 @@ set MSI=
 for /r "src-tauri\target\release\bundle\msi" %%F in (*.msi) do if not defined MSI set MSI=%%~fF
 if not defined MSI (echo [ERROR] Tauri finished without an MSI.& exit /b 1)
 
-copy /y "%MSI%" "release-upload\Frxe-Desktop-1.2.2-x64.msi" >nul
+copy /y "%MSI%" "release-upload\Frxe-Desktop-1.2.3-x64.msi" >nul
 
-echo [OK] release-upload\Frxe-Desktop-1.2.2-x64.msi
+echo [OK] release-upload\Frxe-Desktop-1.2.3-x64.msi
 exit /b 0

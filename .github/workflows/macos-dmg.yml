@@ -13,11 +13,11 @@ jobs:
       matrix:
         include:
           - runner: macos-26
-            file: Frxe-Desktop-1.2.2-macos-arm64.dmg
-            artifact: Frxe-Desktop-1.2.2-macOS-Apple-Silicon
+            file: Frxe-Desktop-1.2.3-macos-arm64.dmg
+            artifact: Frxe-Desktop-1.2.3-macOS-Apple-Silicon
           - runner: macos-26-intel
-            file: Frxe-Desktop-1.2.2-macos-x64.dmg
-            artifact: Frxe-Desktop-1.2.2-macOS-Intel
+            file: Frxe-Desktop-1.2.3-macos-x64.dmg
+            artifact: Frxe-Desktop-1.2.3-macOS-Intel
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:

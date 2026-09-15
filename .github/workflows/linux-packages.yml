@@ -40,8 +40,8 @@ jobs:
       - name: Upload Frxe Desktop Linux packages
         uses: actions/upload-artifact@v4
         with:
-          name: Frxe-Desktop-1.2.2-Linux
+          name: Frxe-Desktop-1.2.3-Linux
           path: |
-            release-upload/Frxe-Desktop-1.2.2-amd64.deb
-            release-upload/Frxe-Desktop-1.2.2-x86_64.AppImage
+            release-upload/Frxe-Desktop-1.2.3-amd64.deb
+            release-upload/Frxe-Desktop-1.2.3-x86_64.AppImage
           if-no-files-found: error

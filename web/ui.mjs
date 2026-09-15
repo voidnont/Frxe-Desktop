@@ -219,7 +219,7 @@ export function createView({
 
         <section class="settings-card glass about-card">
           <div class="brand-mark large">F</div>
-          <div><span>ABOUT</span><h2>Frxe Desktop 1.2.2</h2><p>Frxe desktop music experience by void.</p><div class="support-links"><a class="support-pill pill" href="https://ko-fi.com/voidnont" data-external="https://ko-fi.com/voidnont">Ko-fi</a><a class="support-pill pill" href="https://github.com/voidnont/Frxe-Desktop" data-external="https://github.com/voidnont/Frxe-Desktop">GitHub</a></div></div>
+          <div><span>ABOUT</span><h2>Frxe Desktop 1.2.3</h2><p>Frxe desktop music experience by void.</p><div class="support-links"><a class="support-pill pill" href="https://ko-fi.com/voidnont" data-external="https://ko-fi.com/voidnont">Ko-fi</a><a class="support-pill pill" href="https://github.com/voidnont/Frxe-Desktop" data-external="https://github.com/voidnont/Frxe-Desktop">GitHub</a></div></div>
         </section>
       </div>
     </div>`;

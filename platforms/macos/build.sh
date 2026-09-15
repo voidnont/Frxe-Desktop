@@ -18,8 +18,8 @@ dmg="$(find src-tauri/target/release/bundle/dmg -type f -name '*.dmg' | head -n 
 [[ -n "$dmg" && -f "$dmg" ]] || { echo "[ERROR] No DMG produced."; exit 1; }
 
 case "$(uname -m)" in
-  arm64) dmg_out="Frxe-Desktop-1.2.2-macos-arm64.dmg" ;;
-  x86_64) dmg_out="Frxe-Desktop-1.2.2-macos-x64.dmg" ;;
+  arm64) dmg_out="Frxe-Desktop-1.2.3-macos-arm64.dmg" ;;
+  x86_64) dmg_out="Frxe-Desktop-1.2.3-macos-x64.dmg" ;;
   *) echo "[ERROR] Unsupported macOS architecture."; exit 1 ;;
 esac
 

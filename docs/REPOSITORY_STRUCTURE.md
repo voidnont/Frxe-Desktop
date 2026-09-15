@@ -37,8 +37,8 @@ The workflows under `.github/workflows/` call the matching platform build entry 
 
 The five user-facing packages are:
 
-- `Frxe-Desktop-1.2.2-x64.msi`
-- `Frxe-Desktop-1.2.2-amd64.deb`
-- `Frxe-Desktop-1.2.2-x86_64.AppImage`
-- `Frxe-Desktop-1.2.2-macos-arm64.dmg`
-- `Frxe-Desktop-1.2.2-macos-x64.dmg`
+- `Frxe-Desktop-1.2.3-x64.msi`
+- `Frxe-Desktop-1.2.3-amd64.deb`
+- `Frxe-Desktop-1.2.3-x86_64.AppImage`
+- `Frxe-Desktop-1.2.3-macos-arm64.dmg`
+- `Frxe-Desktop-1.2.3-macos-x64.dmg`

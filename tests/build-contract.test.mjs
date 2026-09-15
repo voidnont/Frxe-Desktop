@@ -87,7 +87,7 @@ test('Home and About use canonical Frxe Desktop support links', async () => {
   assert.doesNotMatch(app, /github\.com\/voidnont\/frxe-windows/i);
 });
 
-test('release version and installer names are consistently 1.2.2', async () => {
+test('release version and installer names are consistently 1.2.3', async () => {
   const [pkg, cargo, config, winScript, linuxScript, macScript, windowsWorkflow, linuxWorkflow, macWorkflow, ui, runtime, search] = await Promise.all([
     read('package.json'),
     read('src-tauri/Cargo.toml'),
@@ -102,19 +102,19 @@ test('release version and installer names are consistently 1.2.2', async () => {
     read('src-tauri/src/runtime.rs'),
     read('src-tauri/src/search.rs'),
   ]);
-  assert.match(pkg, /"version"\s*:\s*"1\.2\.2"/);
-  assert.match(cargo, /^version\s*=\s*"1\.2\.2"/m);
-  assert.match(config, /"version"\s*:\s*"1\.2\.2"/);
-  assert.match(ui, /Frxe Desktop 1\.2\.2/);
-  assert.match(runtime, /Frxe-Desktop\/1\.2\.2/);
-  assert.match(search, /Frxe-Desktop\/1\.2\.2/);
+  assert.match(pkg, /"version"\s*:\s*"1\.2\.3"/);
+  assert.match(cargo, /^version\s*=\s*"1\.2\.3"/m);
+  assert.match(config, /"version"\s*:\s*"1\.2\.3"/);
+  assert.match(ui, /Frxe Desktop 1\.2\.3/);
+  assert.match(runtime, /Frxe-Desktop\/1\.2\.3/);
+  assert.match(search, /Frxe-Desktop\/1\.2\.3/);
 
   const packaging = [winScript, linuxScript, macScript, windowsWorkflow, linuxWorkflow, macWorkflow].join('\n');
-  assert.match(packaging, /Frxe-Desktop-1\.2\.2-x64\.msi/);
-  assert.match(packaging, /Frxe-Desktop-1\.2\.2-amd64\.deb/);
-  assert.match(packaging, /Frxe-Desktop-1\.2\.2-x86_64\.AppImage/);
-  assert.match(packaging, /Frxe-Desktop-1\.2\.2-macos-arm64\.dmg/);
-  assert.match(packaging, /Frxe-Desktop-1\.2\.2-macos-x64\.dmg/);
+  assert.match(packaging, /Frxe-Desktop-1\.2\.3-x64\.msi/);
+  assert.match(packaging, /Frxe-Desktop-1\.2\.3-amd64\.deb/);
+  assert.match(packaging, /Frxe-Desktop-1\.2\.3-x86_64\.AppImage/);
+  assert.match(packaging, /Frxe-Desktop-1\.2\.3-macos-arm64\.dmg/);
+  assert.match(packaging, /Frxe-Desktop-1\.2\.3-macos-x64\.dmg/);
   assert.doesNotMatch(packaging, /Frxe-Desktop-0\.1\.0|v0\.1\.0/);
 });
 
@@ -154,19 +154,19 @@ test('one-off v1.2.2 release publisher is removed after release', async () => {
   assert.equal(await exists('.github/workflows/release-installers.yml'), false);
 });
 
-test('platform CI packages the exact Windows Linux and macOS 1.2.2 names', async () => {
+test('platform CI packages the exact Windows Linux and macOS 1.2.3 names', async () => {
   const [windowsWorkflow, linuxWorkflow, macWorkflow] = await Promise.all([
     read('.github/workflows/windows-msi.yml'),
     read('.github/workflows/linux-packages.yml'),
     read('.github/workflows/macos-dmg.yml'),
   ]);
-  assert.match(windowsWorkflow, /Frxe-Desktop-1\.2\.2-Windows/);
-  assert.match(windowsWorkflow, /Frxe-Desktop-1\.2\.2-x64\.msi/);
-  assert.match(linuxWorkflow, /Frxe-Desktop-1\.2\.2-Linux/);
-  assert.match(linuxWorkflow, /Frxe-Desktop-1\.2\.2-amd64\.deb/);
-  assert.match(linuxWorkflow, /Frxe-Desktop-1\.2\.2-x86_64\.AppImage/);
-  assert.match(macWorkflow, /Frxe-Desktop-1\.2\.2-macOS-Apple-Silicon/);
-  assert.match(macWorkflow, /Frxe-Desktop-1\.2\.2-macOS-Intel/);
-  assert.match(macWorkflow, /Frxe-Desktop-1\.2\.2-macos-arm64\.dmg/);
-  assert.match(macWorkflow, /Frxe-Desktop-1\.2\.2-macos-x64\.dmg/);
+  assert.match(windowsWorkflow, /Frxe-Desktop-1\.2\.3-Windows/);
+  assert.match(windowsWorkflow, /Frxe-Desktop-1\.2\.3-x64\.msi/);
+  assert.match(linuxWorkflow, /Frxe-Desktop-1\.2\.3-Linux/);
+  assert.match(linuxWorkflow, /Frxe-Desktop-1\.2\.3-amd64\.deb/);
+  assert.match(linuxWorkflow, /Frxe-Desktop-1\.2\.3-x86_64\.AppImage/);
+  assert.match(macWorkflow, /Frxe-Desktop-1\.2\.3-macOS-Apple-Silicon/);
+  assert.match(macWorkflow, /Frxe-Desktop-1\.2\.3-macOS-Intel/);
+  assert.match(macWorkflow, /Frxe-Desktop-1\.2\.3-macos-arm64\.dmg/);
+  assert.match(macWorkflow, /Frxe-Desktop-1\.2\.3-macos-x64\.dmg/);
 });

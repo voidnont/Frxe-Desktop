@@ -2,7 +2,7 @@
 
 Frxe Desktop is the Windows, Linux and macOS desktop edition of Frxe, built from one shared Tauri/Rust backend and one shared desktop interface.
 
-Current release: **1.2.2**
+Current release: **1.2.3**
 
 ## Features
 
@@ -35,7 +35,7 @@ platforms\windows\build.bat
 Output:
 
 ```text
-release-upload\Frxe-Desktop-1.2.2-x64.msi
+release-upload\Frxe-Desktop-1.2.3-x64.msi
 ```
 
 ### Linux
@@ -49,8 +49,8 @@ bash platforms/linux/build.sh
 Outputs:
 
 ```text
-release-upload/Frxe-Desktop-1.2.2-amd64.deb
-release-upload/Frxe-Desktop-1.2.2-x86_64.AppImage
+release-upload/Frxe-Desktop-1.2.3-amd64.deb
+release-upload/Frxe-Desktop-1.2.3-x86_64.AppImage
 ```
 
 ### macOS
@@ -62,8 +62,8 @@ bash platforms/macos/build.sh
 Output depends on the Mac architecture:
 
 ```text
-release-upload/Frxe-Desktop-1.2.2-macos-arm64.dmg
-release-upload/Frxe-Desktop-1.2.2-macos-x64.dmg
+release-upload/Frxe-Desktop-1.2.3-macos-arm64.dmg
+release-upload/Frxe-Desktop-1.2.3-macos-x64.dmg
 ```
 
 Apple Developer signing and notarization can be configured separately. Without those credentials, macOS may show the normal unidentified-developer warning.
@@ -89,5 +89,5 @@ npm run tauri:build:macos
 - Product: **Frxe Desktop**
 - Publisher: **void**
 - App identifier: `app.frxe.desktop`
-- Version: **1.2.2**
+- Version: **1.2.3**
 - Repository: `https://github.com/voidnont/Frxe-Desktop`
