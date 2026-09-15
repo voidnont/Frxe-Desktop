@@ -28,19 +28,19 @@ test('native OS media commands reuse Frxe player actions', async () => {
   assert.match(app, /applyNativeMediaCommand/);
   assert.match(app, /listen\(['"]player-command['"]/);
   for (const handler of [
-    'play:',
-    'pause:',
-    'togglePlay:',
-    'next:',
-    'previous:',
-    'stop:',
-    'seekTo:',
-    'seekBy:',
-    'setVolume:',
-    'setShuffle:',
-    'setRepeat:',
+    'play',
+    'pause',
+    'togglePlay',
+    'next',
+    'previous',
+    'stop',
+    'seekTo',
+    'seekBy',
+    'setVolume',
+    'setShuffle',
+    'setRepeat',
   ]) {
-    assert.match(app, new RegExp(handler.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(app, new RegExp(`\\b${handler}\\s*(?::|[,}])`));
   }
   assert.match(app, /applyNativeMediaCommand\([^,]+,\s*payload\)/);
 });
@@ -53,5 +53,4 @@ test('native media state is refreshed for playback and preference changes', asyn
   assert.match(app, /audio\.addEventListener\(['"]durationchange['"][^\n]*syncNativeMediaControls/s);
   assert.match(app, /case ['"]shuffle['"][\s\S]*?syncNativeMediaControls/);
   assert.match(app, /case ['"]repeat['"][\s\S]*?syncNativeMediaControls/);
-}
-);
+});
