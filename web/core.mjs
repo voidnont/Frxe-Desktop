@@ -54,6 +54,17 @@ export function addTrackToPlaylist(playlists, playlistId, track) {
   });
 }
 
+export function removeTrackFromPlaylist(playlists, playlistId, track) {
+  const current = Array.isArray(playlists) ? playlists : [];
+  const key = trackKey(track);
+  if (!playlistId || !key) return [...current];
+  return current.map((playlist) => {
+    if (playlist?.id !== playlistId) return playlist;
+    const tracks = Array.isArray(playlist.tracks) ? playlist.tracks : [];
+    return { ...playlist, tracks: tracks.filter((item) => trackKey(item) !== key) };
+  });
+}
+
 export function queuePrefetchTracks(queue, index, distance = 2) {
   if (!Array.isArray(queue) || !queue.length || !Number.isInteger(index)) return [];
   const output = [];
