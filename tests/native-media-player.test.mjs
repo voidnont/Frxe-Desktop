@@ -54,3 +54,14 @@ test('native media state is refreshed for playback and preference changes', asyn
   assert.match(app, /case ['"]shuffle['"][\s\S]*?syncNativeMediaControls/);
   assert.match(app, /case ['"]repeat['"][\s\S]*?syncNativeMediaControls/);
 });
+
+test('full player seek and volume reuse native-synchronized player actions', async () => {
+  const [app, ui] = await Promise.all([
+    read('web/app.mjs'),
+    read('web/ui.mjs'),
+  ]);
+
+  assert.match(app, /actions:\s*\{[\s\S]*?seekTo[\s\S]*?setVolume[\s\S]*?\}/);
+  assert.match(ui, /document\.querySelector\('#seek'\)\?\.addEventListener\('input',[\s\S]*?actions\.seekTo\(Number\(event\.target\.value\)\)/);
+  assert.match(ui, /document\.querySelector\('#volume'\)\?\.addEventListener\('input',[\s\S]*?actions\.setVolume\(Number\(event\.target\.value\)\)/);
+});
