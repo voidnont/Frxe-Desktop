@@ -3,12 +3,12 @@ import { dedupeTracks } from './core.mjs';
 export function createBackend({ invoke, listen = null, convertFileSrc = (path) => path }) {
   if (typeof invoke !== 'function') throw new TypeError('Frxe Desktop backend requires an invoke function');
 
-  const safeSearch = async (command, payload) => {
+  const trySearch = async (command, payload) => {
     try {
       const result = await invoke(command, payload);
-      return Array.isArray(result) ? result : [];
-    } catch {
-      return [];
+      return { ok: true, results: Array.isArray(result) ? result : [] };
+    } catch (error) {
+      return { ok: false, error };
     }
   };
 
@@ -19,12 +19,16 @@ export function createBackend({ invoke, listen = null, convertFileSrc = (path) =
       const providerQuery = /\b(song|music|audio|lyrics?|official|album|artist|playlist|remix|instrumental|soundtrack|single)\b/i.test(clean)
         ? clean
         : `${clean} song`;
-      const groups = await Promise.all([
-        safeSearch('innertube_search', { query: providerQuery, client: 'music' }),
-        safeSearch('innertube_search', { query: providerQuery, client: 'web' }),
-        safeSearch('ytdlp_search', { query: providerQuery }),
+      const attempts = await Promise.all([
+        trySearch('innertube_search', { query: providerQuery, client: 'music' }),
+        trySearch('innertube_search', { query: providerQuery, client: 'web' }),
+        trySearch('ytdlp_search', { query: providerQuery }),
       ]);
-      return dedupeTracks(groups);
+      const successful = attempts.filter((attempt) => attempt.ok);
+      if (!successful.length) {
+        throw new Error('Search providers are temporarily unavailable. Try again.');
+      }
+      return dedupeTracks(successful.map((attempt) => attempt.results));
     },
 
     async resolveTrack(track) {
