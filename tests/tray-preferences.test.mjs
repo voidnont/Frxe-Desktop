@@ -12,7 +12,7 @@ test('tray preference has an explicit default and preserves an explicit off choi
   assert.equal(normalizePreferences({ trayEnabled: false }).trayEnabled, false);
 });
 
-test('startup synchronizes persisted tray visibility without changing close-to-exit behavior', async () => {
+test('startup synchronizes persisted tray visibility while close remains a native exit', async () => {
   const [app, closeControls] = await Promise.all([
     read('web/app.mjs'),
     read('web/window-controls.mjs'),
