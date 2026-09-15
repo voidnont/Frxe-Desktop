@@ -1,0 +1,59 @@
+name: Apply v1.2.3 Tray Fix
+
+on:
+  push:
+    branches: [v1.2.3]
+    paths:
+      - '.github/workflows/v123-apply-tray-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v1.2.3
+          fetch-depth: 1
+
+      - name: Apply persisted tray preference fix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          core = Path('web/core.mjs')
+          core_text = core.read_text()
+          old_default = """  reducedMotion: false,\n});"""
+          new_default = """  reducedMotion: false,\n  trayEnabled: true,\n});"""
+          if old_default not in core_text:
+              raise SystemExit('core default marker not found')
+          core_text = core_text.replace(old_default, new_default, 1)
+
+          old_normalize = """  if (!['off', 'queue', 'track'].includes(next.repeat)) next.repeat = DEFAULT_PREFERENCES.repeat;\n  next.muted = Boolean(next.muted);"""
+          new_normalize = """  if (!['off', 'queue', 'track'].includes(next.repeat)) next.repeat = DEFAULT_PREFERENCES.repeat;\n  next.trayEnabled = next.trayEnabled !== false;\n  next.muted = Boolean(next.muted);"""
+          if old_normalize not in core_text:
+              raise SystemExit('core normalize marker not found')
+          core.write_text(core_text.replace(old_normalize, new_normalize, 1))
+
+          app = Path('web/app.mjs')
+          app_text = app.read_text()
+          marker = """  } catch {}\n  try {\n    downloadUnlisten = await backend.onDownloadProgress((payload) => {"""
+          replacement = """  } catch {}\n  try {\n    await backend.setTrayEnabled(state.prefs.trayEnabled);\n  } catch {}\n  try {\n    downloadUnlisten = await backend.onDownloadProgress((payload) => {"""
+          if marker not in app_text:
+              raise SystemExit('app startup marker not found')
+          app.write_text(app_text.replace(marker, replacement, 1))
+          PY
+
+      - name: Commit production fix and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/v123-apply-tray-fix.yml
+          git config user.name 'void'
+          git config user.email 'voidnont@proton.me'
+          git add web/core.mjs web/app.mjs .github/workflows/v123-apply-tray-fix.yml
+          git commit -m 'fix: sync tray preference at startup'
+          git push origin HEAD:v1.2.3
