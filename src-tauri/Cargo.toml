@@ -23,6 +23,7 @@ regex = "1"
 sysinfo = "0.37"
 urlencoding = "2"
 walkdir = "2"
+playwire = "1.0.0"
 
 [dev-dependencies]
 tempfile = "3"
