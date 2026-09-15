@@ -377,17 +377,11 @@ export function createView({
     });
 
     document.querySelector('#seek')?.addEventListener('input', (event) => {
-      audio.currentTime = Number(event.target.value);
-      actions.syncPlayerUi();
+      actions.seekTo(Number(event.target.value));
     });
 
     document.querySelector('#volume')?.addEventListener('input', (event) => {
-      const value = Number(event.target.value);
-      state.prefs.volume = value;
-      state.prefs.muted = value === 0;
-      audio.volume = value;
-      audio.muted = state.prefs.muted;
-      savePrefs();
+      actions.setVolume(Number(event.target.value));
     });
   }
 
