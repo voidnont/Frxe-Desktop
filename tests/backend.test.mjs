@@ -25,6 +25,26 @@ test('search prioritizes YouTube Music before YouTube fallbacks and deduplicates
   assert.equal(results[0].source, 'YouTube Music');
 });
 
+test('search keeps partial provider success but reports a total provider outage', async () => {
+  const partial = createBackend({
+    invoke: async (command, payload) => {
+      if (command === 'innertube_search' && payload.client === 'music') throw new Error('music unavailable');
+      if (command === 'innertube_search' && payload.client === 'web') return [];
+      if (command === 'ytdlp_search') return [{ ...online, source: 'yt-dlp' }];
+      throw new Error(`unexpected ${command}`);
+    },
+  });
+  assert.deepEqual(await partial.search('test'), [{ ...online, source: 'yt-dlp' }]);
+
+  const unavailable = createBackend({
+    invoke: async () => { throw new Error('provider offline'); },
+  });
+  await assert.rejects(
+    unavailable.search('test'),
+    /search providers.*unavailable|search.*failed/i,
+  );
+});
+
 test('resolveTrack uses local asset URLs and the Frxe online resolver', async () => {
   const calls = [];
   const backend = createBackend({
