@@ -43,6 +43,17 @@ export function createPlaylist(playlists, name, id) {
   return [...current, { id, name: cleanName, tracks: [] }];
 }
 
+export function addTrackToPlaylist(playlists, playlistId, track) {
+  const current = Array.isArray(playlists) ? playlists : [];
+  if (!playlistId || !trackKey(track)) return [...current];
+  return current.map((playlist) => {
+    if (playlist?.id !== playlistId) return playlist;
+    const tracks = Array.isArray(playlist.tracks) ? playlist.tracks : [];
+    if (tracks.some((item) => trackKey(item) === trackKey(track))) return playlist;
+    return { ...playlist, tracks: [...tracks, track] };
+  });
+}
+
 export function queuePrefetchTracks(queue, index, distance = 2) {
   if (!Array.isArray(queue) || !queue.length || !Number.isInteger(index)) return [];
   const output = [];
