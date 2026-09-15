@@ -81,48 +81,6 @@ select option:hover {
   margin-top: 0;
 }
 
-.update-card {
-  overflow: hidden;
-}
-
-.update-status {
-  margin-top: 10px;
-  color: #f6f7fb;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.update-release {
-  display: grid;
-  gap: 6px;
-  margin-top: 12px;
-  padding: 13px;
-}
-
-.update-release small,
-.update-progress small {
-  color: var(--muted);
-}
-
-.update-release p {
-  margin: 3px 0 0;
-  color: var(--muted);
-  white-space: pre-wrap;
-}
-
-.update-progress {
-  display: grid;
-  gap: 7px;
-  margin-top: 13px;
-}
-
-.update-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-
 @media (max-width: 980px) {
   .mini-volume { min-width: 90px; }
   .mini-volume input { width: 58px; }
