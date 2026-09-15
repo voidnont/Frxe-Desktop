@@ -65,6 +65,11 @@ export function removeTrackFromPlaylist(playlists, playlistId, track) {
   });
 }
 
+export function deletePlaylist(playlists, playlistId) {
+  const current = Array.isArray(playlists) ? playlists : [];
+  return current.filter((playlist) => playlist?.id !== playlistId);
+}
+
 export function queuePrefetchTracks(queue, index, distance = 2) {
   if (!Array.isArray(queue) || !queue.length || !Number.isInteger(index)) return [];
   const output = [];
