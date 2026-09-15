@@ -1,5 +1,7 @@
 mod downloads;
 mod lyrics;
+#[cfg(test)]
+mod media_controls;
 mod models;
 mod runtime;
 mod search;
