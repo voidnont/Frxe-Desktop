@@ -2,9 +2,7 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-      - cleanup/v1.2.2-final
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
