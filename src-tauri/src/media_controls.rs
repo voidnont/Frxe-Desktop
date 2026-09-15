@@ -1,7 +1,8 @@
-use playwire::{Capabilities, Event, PlaybackState, Repeat, Track};
+use playwire::{Capabilities, Event, MediaControls, PlaybackState, PlayerConfig, Repeat, Track};
 use serde::Deserialize;
 use serde_json::{json, Value};
-use std::time::Duration;
+use std::{sync::Mutex, time::Duration};
+use tauri::{Emitter, Manager};
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,6 +21,10 @@ pub struct MediaPlaybackSnapshot {
     pub can_next: bool,
     pub can_previous: bool,
     pub can_seek: bool,
+}
+
+pub struct MediaControlsManager {
+    controls: Mutex<Option<MediaControls>>,
 }
 
 fn finite_non_negative(value: f64) -> f64 {
@@ -120,6 +125,72 @@ pub fn event_payload(event: Event) -> Option<Value> {
         Event::Quit => Some(json!({ "action": "quit" })),
         _ => None,
     }
+}
+
+pub fn install(app: &tauri::App) -> Result<(), String> {
+    let mut config = PlayerConfig::new("Frxe Desktop")
+        .desktop_entry("app.frxe.desktop")
+        .track_id_prefix("/app/frxe/desktop/track");
+
+    #[cfg(windows)]
+    {
+        let window = app
+            .get_webview_window("main")
+            .ok_or_else(|| "Frxe main window is unavailable".to_string())?;
+        let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+        config = config.hwnd(hwnd.0 as isize);
+    }
+
+    let app_handle = app.handle().clone();
+    let controls = MediaControls::new(config, move |event| {
+        match event {
+            Event::Raise => {
+                if let Some(window) = app_handle.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            Event::Quit => app_handle.exit(0),
+            Event::OpenUri(_) => {}
+            other => {
+                if let Some(payload) = event_payload(other) {
+                    let _ = app_handle.emit("player-command", payload);
+                }
+            }
+        }
+    });
+
+    match controls {
+        Ok(controls) => {
+            app.manage(MediaControlsManager {
+                controls: Mutex::new(Some(controls)),
+            });
+            Ok(())
+        }
+        Err(error) => {
+            app.manage(MediaControlsManager {
+                controls: Mutex::new(None),
+            });
+            Err(error.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+pub fn update_media_controls(
+    state: tauri::State<'_, MediaControlsManager>,
+    snapshot: MediaPlaybackSnapshot,
+) -> Result<(), String> {
+    let mut controls = state
+        .controls
+        .lock()
+        .map_err(|_| "Frxe native media controls are unavailable".to_string())?;
+    if let Some(controls) = controls.as_mut() {
+        controls
+            .set_state(&snapshot_to_playwire(&snapshot))
+            .map_err(|error| error.to_string())?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
