@@ -36,6 +36,13 @@ export function selectPlaybackQueue(track, candidates = []) {
   return { queue: [track], index: 0 };
 }
 
+export function createPlaylist(playlists, name, id) {
+  const current = Array.isArray(playlists) ? playlists : [];
+  const cleanName = String(name || '').trim();
+  if (!cleanName || !id) return [...current];
+  return [...current, { id, name: cleanName, tracks: [] }];
+}
+
 export function queuePrefetchTracks(queue, index, distance = 2) {
   if (!Array.isArray(queue) || !queue.length || !Number.isInteger(index)) return [];
   const output = [];
