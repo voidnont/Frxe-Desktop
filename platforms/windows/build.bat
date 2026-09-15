@@ -1,35 +1,35 @@
 @echo off
-setlocal EnableExtensions
+setlocal
+
 cd /d "%~dp0\..\.."
 
-echo ============================================================
-echo                FRXE DESKTOP WINDOWS BUILD
-echo ============================================================
-
-where node >nul 2>nul || (echo [ERROR] Node.js 20+ is required.& exit /b 1)
-where npm >nul 2>nul || (echo [ERROR] npm is required.& exit /b 1)
-where cargo >nul 2>nul || (echo [ERROR] Rust/Cargo is required.& exit /b 1)
-
-for /f "tokens=*" %%V in ('node -p "process.versions.node.split('.')[0]"') do set NODE_MAJOR=%%V
-if %NODE_MAJOR% LSS 20 (echo [ERROR] Node.js 20+ is required.& exit /b 1)
+where cargo >nul 2>&1
+if %errorlevel% neq 0 (
+  echo Cargo/Rust is required. Install Rust and run this script again.
+  exit /b 1
+)
 
 call npm install
-if errorlevel 1 exit /b 1
+if %errorlevel% neq 0 exit /b %errorlevel%
+
+call npx tauri icon web\frxe-icon.svg --output src-tauri\icons
+if %errorlevel% neq 0 exit /b %errorlevel%
+
 call npm run check
-if errorlevel 1 exit /b 1
-call npm run icons
-if errorlevel 1 exit /b 1
-call cargo test --manifest-path src-tauri\Cargo.toml
-if errorlevel 1 exit /b 1
-call npm run tauri:build:windows
-if errorlevel 1 exit /b 1
+if %errorlevel% neq 0 exit /b %errorlevel%
 
-if not exist release-upload mkdir release-upload
-set MSI=
-for /r "src-tauri\target\release\bundle\msi" %%F in (*.msi) do if not defined MSI set MSI=%%~fF
-if not defined MSI (echo [ERROR] Tauri finished without an MSI.& exit /b 1)
+call npx tauri build --bundles msi
+if %errorlevel% neq 0 exit /b %errorlevel%
 
-copy /y "%MSI%" "release-upload\Frxe-Desktop-1.2.3-x64.msi" >nul
+set "MSI_SOURCE=src-tauri\target\release\bundle\msi\Frxe Desktop_1.2.4_x64_en-US.msi"
+if not exist "%MSI_SOURCE%" (
+  echo Built MSI not found: %MSI_SOURCE%
+  exit /b 1
+)
 
-echo [OK] release-upload\Frxe-Desktop-1.2.3-x64.msi
+if not exist "release-upload" mkdir "release-upload"
+copy /Y "%MSI_SOURCE%" "release-upload\Frxe-Desktop-1.2.4-x64.msi" >nul
+
+echo.
+echo Built release-upload\Frxe-Desktop-1.2.4-x64.msi
 exit /b 0

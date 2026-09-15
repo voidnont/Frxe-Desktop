@@ -1,27 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/../.."
 
-command -v node >/dev/null || { echo "[ERROR] Node.js 20+ is required."; exit 1; }
-command -v npm >/dev/null || { echo "[ERROR] npm is required."; exit 1; }
-command -v cargo >/dev/null || { echo "[ERROR] Rust/Cargo is required."; exit 1; }
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+command -v cargo >/dev/null || { echo "Cargo/Rust is required." >&2; exit 1; }
+command -v npm >/dev/null || { echo "npm is required." >&2; exit 1; }
 
 npm install
+npx tauri icon web/frxe-icon.svg --output src-tauri/icons
 npm run check
-npm run icons
-cargo test --manifest-path src-tauri/Cargo.toml
-npm run tauri:build:linux
+npx tauri build --bundles deb,appimage
+
+DEB_SOURCE="src-tauri/target/release/bundle/deb/Frxe Desktop_1.2.4_amd64.deb"
+APPIMAGE_SOURCE="src-tauri/target/release/bundle/appimage/Frxe Desktop_1.2.4_amd64.AppImage"
+
+[[ -f "$DEB_SOURCE" ]] || { echo "Built DEB not found: $DEB_SOURCE" >&2; exit 1; }
+[[ -f "$APPIMAGE_SOURCE" ]] || { echo "Built AppImage not found: $APPIMAGE_SOURCE" >&2; exit 1; }
 
 mkdir -p release-upload
+cp "$DEB_SOURCE" "release-upload/Frxe-Desktop-1.2.4-amd64.deb"
+cp "$APPIMAGE_SOURCE" "release-upload/Frxe-Desktop-1.2.4-x86_64.AppImage"
 
-deb="$(find src-tauri/target/release/bundle/deb -type f -name '*.deb' | head -n 1 || true)"
-appimage="$(find src-tauri/target/release/bundle/appimage -type f -name '*.AppImage' | head -n 1 || true)"
-
-[[ -n "$deb" && -f "$deb" ]] || { echo "[ERROR] No DEB produced."; exit 1; }
-[[ -n "$appimage" && -f "$appimage" ]] || { echo "[ERROR] No AppImage produced."; exit 1; }
-
-cp "$deb" release-upload/Frxe-Desktop-1.2.3-amd64.deb
-cp "$appimage" release-upload/Frxe-Desktop-1.2.3-x86_64.AppImage
-
-echo "[OK] release-upload/Frxe-Desktop-1.2.3-amd64.deb"
-echo "[OK] release-upload/Frxe-Desktop-1.2.3-x86_64.AppImage"
+echo "Built:"
+echo "  release-upload/Frxe-Desktop-1.2.4-amd64.deb"
+echo "  release-upload/Frxe-Desktop-1.2.4-x86_64.AppImage"

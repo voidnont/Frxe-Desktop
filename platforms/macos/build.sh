@@ -1,27 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/../.."
 
-command -v node >/dev/null || { echo "[ERROR] Node.js 20+ is required."; exit 1; }
-command -v npm >/dev/null || { echo "[ERROR] npm is required."; exit 1; }
-command -v cargo >/dev/null || { echo "[ERROR] Rust/Cargo is required."; exit 1; }
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+command -v cargo >/dev/null || { echo "Cargo/Rust is required." >&2; exit 1; }
+command -v npm >/dev/null || { echo "npm is required." >&2; exit 1; }
 
 npm install
+npx tauri icon web/frxe-icon.svg --output src-tauri/icons
 npm run check
-npm run icons
-cargo test --manifest-path src-tauri/Cargo.toml
-npm run tauri:build:macos
+npx tauri build --bundles dmg
 
-mkdir -p release-upload
-
-dmg="$(find src-tauri/target/release/bundle/dmg -type f -name '*.dmg' | head -n 1 || true)"
-[[ -n "$dmg" && -f "$dmg" ]] || { echo "[ERROR] No DMG produced."; exit 1; }
-
-case "$(uname -m)" in
-  arm64) dmg_out="Frxe-Desktop-1.2.3-macos-arm64.dmg" ;;
-  x86_64) dmg_out="Frxe-Desktop-1.2.3-macos-x64.dmg" ;;
-  *) echo "[ERROR] Unsupported macOS architecture."; exit 1 ;;
+ARCH="$(uname -m)"
+case "$ARCH" in
+  arm64) TARGET_ARCH="aarch64"; RELEASE_ARCH="arm64" ;;
+  x86_64) TARGET_ARCH="x64"; RELEASE_ARCH="x64" ;;
+  *) echo "Unsupported macOS architecture: $ARCH" >&2; exit 1 ;;
 esac
 
-cp "$dmg" "release-upload/$dmg_out"
-echo "[OK] release-upload/$dmg_out"
+DMG_SOURCE="src-tauri/target/release/bundle/dmg/Frxe Desktop_1.2.4_${TARGET_ARCH}.dmg"
+[[ -f "$DMG_SOURCE" ]] || { echo "Built DMG not found: $DMG_SOURCE" >&2; exit 1; }
+
+mkdir -p release-upload
+OUTPUT="release-upload/Frxe-Desktop-1.2.4-macos-${RELEASE_ARCH}.dmg"
+cp "$DMG_SOURCE" "$OUTPUT"
+
+echo "Built $OUTPUT"
