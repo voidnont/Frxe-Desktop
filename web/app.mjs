@@ -298,9 +298,11 @@ async function updateRuntime() {
   render();
   try {
     state.runtimeStatus = await backend.updateRuntimeDependencies();
-    toast(state.runtimeStatus?.warnings?.length ? 'Runtime updated with warnings.' : 'Runtime dependencies updated.');
+    toast(state.runtimeStatus?.warnings?.length
+      ? 'yt-dlp updated. Runtime checks found warnings.'
+      : 'yt-dlp updated.');
   } catch (error) {
-    toast(`Runtime update failed: ${readableError(error)}`, 'error');
+    toast(`yt-dlp update failed: ${readableError(error)}`, 'error');
   } finally {
     state.runtimeLoading = false;
     render();
@@ -489,6 +491,9 @@ async function initialize() {
   } catch {}
   try {
     await backend.setTrayEnabled(state.prefs.trayEnabled);
+  } catch {}
+  try {
+    state.runtimeStatus = await backend.currentRuntimeStatus();
   } catch {}
   try {
     downloadUnlisten = await backend.onDownloadProgress((payload) => {

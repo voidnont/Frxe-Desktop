@@ -157,13 +157,13 @@ export function createView({
 
         <section class="settings-card glass runtime-card">
           <div class="setting-head"><div><span>BACKEND</span><h2>Frxe runtime</h2></div><span class="backend-badge">NATIVE</span></div>
-          <p>yt-dlp, Deno, FFmpeg and InnerTube compatibility are managed by Frxe Desktop.</p>
+          <p>Frxe manages yt-dlp. Deno and FFmpeg are detected from your system and shown here when available.</p>
           ${status ? `<div class="runtime-list">
             <span>yt-dlp <b>${escapeHtml(status.ytDlpVersion || 'unknown')}</b></span>
             <span>Deno <b>${escapeHtml(status.denoVersion || 'unknown')}</b></span>
             <span>FFmpeg <b>${escapeHtml(status.ffmpegVersion || 'unknown')}</b></span>
           </div>${status.warnings?.length ? `<div class="runtime-warnings">${status.warnings.map((warning) => `<small>${escapeHtml(warning)}</small>`).join('')}</div>` : ''}` : ''}
-          <button class="primary pill" data-action="update-runtime" ${state.runtimeLoading ? 'disabled' : ''}>${state.runtimeLoading ? 'Updating…' : 'Update runtime dependencies'}</button>
+          <button class="primary pill" data-action="update-runtime" ${state.runtimeLoading ? 'disabled' : ''}>${state.runtimeLoading ? 'Updating yt-dlp…' : 'Update yt-dlp'}</button>
         </section>
 
         <section class="settings-card glass about-card">
