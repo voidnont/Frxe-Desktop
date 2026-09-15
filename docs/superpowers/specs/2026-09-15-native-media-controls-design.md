@@ -29,12 +29,12 @@ This design keeps that architecture intact.
 
 ## Chosen approach
 
-Use a dedicated Rust `media_controls` subsystem backed by the `playwire` crate.
+Use a dedicated Rust `media_controls` subsystem backed by `playwire` 1.0.x.
 
 Reasons:
 
 - one API surface for Windows SMTC, Linux MPRIS, and macOS Now Playing / Remote Command Center;
-- supports the full integration scope selected for v1.2.4, including metadata, artwork, playback state, position, seeking, repeat, shuffle, and capabilities;
+- supports the full integration scope selected for v1.2.4, including metadata, artwork, playback state, position, seeking, repeat, shuffle, volume on MPRIS, and dynamic next/previous/seek capabilities;
 - avoids maintaining three separate platform integrations while still using native OS facilities;
 - keeps platform-specific details behind the Rust module boundary.
 
@@ -54,6 +54,7 @@ The HTML audio element and existing playback functions remain authoritative for:
 - queue and queue index;
 - playing/paused state;
 - playback position and duration;
+- volume/mute state;
 - next/previous behavior;
 - shuffle;
 - repeat;
@@ -73,7 +74,8 @@ The module owns:
 - artwork publication;
 - playback-state publication;
 - position/duration publication;
-- shuffle/repeat publication when supported;
+- volume publication where the platform supports it;
+- shuffle/repeat publication;
 - receiving native media commands;
 - emitting normalized Tauri events back to the frontend.
 
@@ -81,7 +83,7 @@ The module must not own queue logic or mutate Frxe playback state directly.
 
 ### 3. Native playback snapshot
 
-The frontend sends a normalized snapshot through a Tauri command whenever meaningful playback state changes.
+The frontend sends a normalized snapshot through a Tauri command whenever playback state changes.
 
 Proposed shape:
 
@@ -91,20 +93,24 @@ MediaPlaybackSnapshot
 - title: optional string
 - artist: optional string
 - album: optional string
-- artwork: optional string
+- artwork_url: optional string
+- source_url: optional string
 - duration_seconds: optional float
-- position_seconds: optional float
+- position_seconds: float
 - playing: bool
-- can_play: bool
-- can_pause: bool
+- volume: float (0.0..1.0)
+- shuffle: bool
+- repeat: off | queue | track
 - can_next: bool
 - can_previous: bool
 - can_seek: bool
-- shuffle: bool
-- repeat: off | queue | track
 ```
 
-Artwork may be a network URL, data URL, or local asset URL. If the native backend cannot consume a supplied artwork source safely, it must omit artwork rather than fail the entire snapshot update.
+The Rust mapper converts this to `playwire::PlaybackState`, `playwire::Track`, `playwire::Repeat`, and `playwire::Capabilities`.
+
+Artwork supplied to `playwire` must be an `http://`, `https://`, or `file://` URL. Local filesystem artwork is normalized to `file://` before publication. Unsupported artwork forms are omitted rather than causing the snapshot update to fail.
+
+Track ids must be stable and unique per track because the native layer and MPRIS clients use them to distinguish metadata changes.
 
 ### 4. Frontend-to-native synchronization
 
@@ -114,14 +120,15 @@ Snapshots are published:
 
 - when the active track changes;
 - when playback starts or pauses;
-- after a seek;
+- on normal playback position ticks (`timeupdate`);
+- after an explicit seek;
 - when duration becomes known or changes;
+- when volume/mute changes;
 - when shuffle changes;
 - when repeat changes;
-- when queue capabilities change;
-- periodically during active playback at a conservative interval rather than on every `timeupdate` event.
+- when queue capabilities change.
 
-The periodic update should be throttled to avoid unnecessary IPC traffic. The native layer may extrapolate position between updates where supported.
+`playwire` performs its own state diffing, so publishing each playback tick is intentional and keeps OS timeline/scrubber state accurate without rebuilding unchanged metadata.
 
 When no track is active, Frxe sends a cleared/inactive snapshot and the OS media session removes stale metadata.
 
@@ -140,11 +147,15 @@ previous
 stop
 seek-to { position_seconds }
 seek-by { offset_seconds }
+set-volume { volume }
 set-shuffle { enabled }
 set-repeat { mode }
+raise
+quit
+open-uri { uri }
 ```
 
-The frontend listener maps these commands to the existing Frxe functions and state mutations.
+The frontend listener maps playback commands to existing Frxe functions and state mutations.
 
 Examples:
 
@@ -156,10 +167,14 @@ Examples:
 - `stop` -> pause and set current position to zero
 - `seek-to` -> clamp and set `audio.currentTime`
 - `seek-by` -> clamp relative movement within the current duration
+- `set-volume` -> clamp to 0.0..1.0, update `state.prefs.volume`/`muted`, update the audio element, save preferences, and publish a fresh snapshot
 - `set-shuffle` -> update `state.prefs.shuffle`, save preferences, render, publish a fresh snapshot
 - `set-repeat` -> update `state.prefs.repeat`, save preferences, render, publish a fresh snapshot
+- `raise` -> show/focus the main Frxe window when supported
+- `quit` -> use the existing native application exit path when supported
+- `open-uri` -> ignore unless the URI is a supported Frxe media target; v1.2.4 does not add arbitrary URI playback
 
-Unknown commands are ignored safely.
+Unknown commands are ignored safely. Platform-specific commands that are not useful to Frxe may be ignored without failing the media session.
 
 ## Platform behavior
 
@@ -174,9 +189,10 @@ Requirements:
 - expose play/pause, previous, next, and seek where supported;
 - publish duration and current timeline position;
 - respond to hardware media keys and Windows media flyout controls;
+- publish shuffle and repeat state;
 - preserve existing tray and window behavior.
 
-The Tauri main window handle is supplied to the native media-control backend when Windows requires it.
+`playwire::PlayerConfig::hwnd` is required on Windows. The HWND is obtained from the Tauri main window during setup and supplied only to the Windows backend.
 
 ### Linux
 
@@ -189,8 +205,11 @@ Requirements:
 - play/pause, previous, next;
 - position and seeking;
 - playback status;
-- shuffle and loop status where supported;
-- volume only if it can be represented without creating a second source of truth. Volume remains owned by the frontend audio element.
+- shuffle and loop status;
+- MPRIS volume synchronized with Frxe's existing volume preference/audio element;
+- Raise/Quit support mapped to existing application behavior where practical.
+
+The Linux desktop entry identifier supplied to `playwire` must match Frxe's packaged desktop identity so GNOME/KDE can resolve the correct app icon.
 
 ### macOS
 
@@ -200,8 +219,11 @@ Requirements:
 
 - publish current title, artist, album, artwork, duration, and elapsed position;
 - support play, pause, toggle, previous, next, and seek where available;
+- publish shuffle and repeat state;
 - respond to media keys and compatible headset/media-button commands;
 - clear stale Now Playing information when playback is removed.
+
+The existing Tauri application provides the running macOS application context required by the native Now Playing integration.
 
 ## Browser Media Session fallback
 
@@ -219,7 +241,9 @@ update_media_controls(snapshot)
 
 Initialization happens during Tauri setup, alongside tray installation.
 
-The command should be resilient: unsupported optional capabilities or artwork failures must not crash the application. Fatal initialization failure should disable native media controls while leaving normal Frxe playback functional.
+The native manager is stored as Tauri managed state so update commands can safely mutate the `MediaControls` handle from the application lifecycle.
+
+The command is resilient: unsupported optional capabilities or artwork failures must not crash the application. Fatal initialization failure disables native media controls while leaving normal Frxe playback functional.
 
 ## Error handling
 
@@ -228,11 +252,12 @@ Native media controls are an enhancement, not a playback dependency.
 Rules:
 
 - Frxe audio playback must continue if native media-control initialization fails.
-- Optional metadata/artwork failures must be swallowed or logged and must not interrupt playback.
-- Invalid seek requests are clamped to valid playback bounds.
+- Optional metadata/artwork failures must be logged or omitted and must not interrupt playback.
+- Invalid positions, durations, or volume values are clamped before publication/application.
 - Commands received before a track exists are ignored.
 - Native session teardown must not panic during application shutdown.
 - Platform-specific unsupported features degrade gracefully rather than blocking startup.
+- OS callback threads must hand work off to Tauri/frontend events and must not perform blocking playback work directly.
 
 ## Testing strategy
 
@@ -240,12 +265,14 @@ Rules:
 
 Test pure mapping logic separately from OS APIs:
 
-- Frxe repeat mode -> native repeat mode;
-- native command -> normalized `player-command` payload;
-- capability calculation;
+- Frxe repeat mode -> `playwire::Repeat`;
+- native `playwire::Event` -> normalized `player-command` payload;
+- next/previous/seek capability calculation/mapping;
 - cleared snapshot behavior;
-- position and duration clamping;
-- metadata conversion with missing optional fields.
+- position/duration/volume clamping;
+- metadata conversion with missing optional fields;
+- stable track id mapping;
+- invalid artwork omission.
 
 OS API wrappers should be kept thin enough that most behavior can be tested without requiring a desktop media service in CI.
 
@@ -256,11 +283,12 @@ Add tests covering:
 - snapshot construction from Frxe state;
 - snapshot publication on track change;
 - play/pause synchronization;
+- position publication from playback ticks;
 - seek command handling;
 - next/previous command handling;
+- volume command handling;
 - shuffle/repeat command handling;
-- clearing native metadata when the active track disappears;
-- throttled position synchronization rather than IPC on every `timeupdate` event.
+- clearing native metadata when the active track disappears.
 
 ### CI
 
@@ -281,7 +309,8 @@ Included in v1.2.4:
 - media keys;
 - OS play/pause/next/previous;
 - seek and timeline integration;
-- shuffle/repeat integration where supported;
+- Linux MPRIS volume synchronization;
+- shuffle/repeat integration;
 - artwork;
 - Windows SMTC;
 - Linux MPRIS;
@@ -294,7 +323,8 @@ Not included:
 - audio-device routing;
 - equalizer/DSP work;
 - mobile integrations;
-- in-app updater changes.
+- in-app updater changes;
+- arbitrary external URI playback.
 
 ## Success criteria
 
@@ -304,7 +334,7 @@ v1.2.4 is ready when:
 2. Each supported OS shows accurate current-track metadata and artwork.
 3. OS play/pause/next/previous commands affect the same playback state as the Frxe UI.
 4. OS seek controls update the Frxe audio element and UI.
-5. Frxe state changes are reflected back into the OS media session.
+5. Frxe state changes are reflected back into the OS media session, including timeline, shuffle, repeat, and MPRIS volume where supported.
 6. Native media-control failure never prevents normal audio playback.
 7. All automated checks pass.
 8. Platform package workflows compile successfully for Windows, Linux, Apple Silicon macOS, and Intel macOS.
