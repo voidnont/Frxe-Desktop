@@ -88,3 +88,13 @@ test('scanDownloads and lyrics use the native payload names', async () => {
     ['fetch_metadata_lyrics', { title: 'Song', artist: 'Artist', album: 'Album', durationSeconds: 201 }],
   ]);
 });
+
+test('updateMediaControls maps the snapshot to the native command', async () => {
+  let call;
+  const backend = createBackend({
+    invoke: async (command, payload) => { call = [command, payload]; },
+  });
+  const snapshot = { trackId: 'abc', playing: true };
+  await backend.updateMediaControls(snapshot);
+  assert.deepEqual(call, ['update_media_controls', { snapshot }]);
+});
