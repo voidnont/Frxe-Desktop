@@ -1,6 +1,5 @@
 mod downloads;
 mod lyrics;
-#[cfg(test)]
 mod media_controls;
 mod models;
 mod runtime;
@@ -18,6 +17,9 @@ pub fn run() {
         .manage(downloads::DownloadManager::default())
         .setup(|app| {
             tray::install(app)?;
+            if let Err(error) = media_controls::install(app) {
+                eprintln!("Frxe native media controls unavailable: {error}");
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -34,6 +36,7 @@ pub fn run() {
             runtime::update_runtime_dependencies,
             runtime::current_runtime_status,
             tray::set_tray_enabled,
+            media_controls::update_media_controls,
             exit_app
         ])
         .run(tauri::generate_context!())
