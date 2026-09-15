@@ -88,7 +88,7 @@ test('Home and About use canonical Frxe Desktop support links', async () => {
 });
 
 test('release version and installer names are consistently 1.2.2', async () => {
-  const [pkg, cargo, config, winScript, linuxScript, macScript, windowsWorkflow, linuxWorkflow, macWorkflow, releaseWorkflow, ui, runtime, search] = await Promise.all([
+  const [pkg, cargo, config, winScript, linuxScript, macScript, windowsWorkflow, linuxWorkflow, macWorkflow, ui, runtime, search] = await Promise.all([
     read('package.json'),
     read('src-tauri/Cargo.toml'),
     read('src-tauri/tauri.conf.json'),
@@ -98,7 +98,6 @@ test('release version and installer names are consistently 1.2.2', async () => {
     read('.github/workflows/windows-msi.yml'),
     read('.github/workflows/linux-packages.yml'),
     read('.github/workflows/macos-dmg.yml'),
-    read('.github/workflows/release-installers.yml'),
     read('web/ui.mjs'),
     read('src-tauri/src/runtime.rs'),
     read('src-tauri/src/search.rs'),
@@ -110,31 +109,28 @@ test('release version and installer names are consistently 1.2.2', async () => {
   assert.match(runtime, /Frxe-Desktop\/1\.2\.2/);
   assert.match(search, /Frxe-Desktop\/1\.2\.2/);
 
-  const packaging = [winScript, linuxScript, macScript, windowsWorkflow, linuxWorkflow, macWorkflow, releaseWorkflow].join('\n');
+  const packaging = [winScript, linuxScript, macScript, windowsWorkflow, linuxWorkflow, macWorkflow].join('\n');
   assert.match(packaging, /Frxe-Desktop-1\.2\.2-x64\.msi/);
   assert.match(packaging, /Frxe-Desktop-1\.2\.2-amd64\.deb/);
   assert.match(packaging, /Frxe-Desktop-1\.2\.2-x86_64\.AppImage/);
   assert.match(packaging, /Frxe-Desktop-1\.2\.2-macos-arm64\.dmg/);
   assert.match(packaging, /Frxe-Desktop-1\.2\.2-macos-x64\.dmg/);
-  assert.match(releaseWorkflow, /v1\.2\.2/);
-  assert.match(releaseWorkflow, /Frxe Desktop 1\.2\.2/);
   assert.doesNotMatch(packaging, /Frxe-Desktop-0\.1\.0|v0\.1\.0/);
 });
 
 test('current project links use voidnont/Frxe-Desktop', async () => {
-  const [config, ui, readme, releaseWorkflow] = await Promise.all([
+  const [config, ui, readme] = await Promise.all([
     read('src-tauri/tauri.conf.json'),
     read('web/ui.mjs'),
     read('README.md'),
-    read('.github/workflows/release-installers.yml'),
   ]);
-  const joined = [config, ui, readme, releaseWorkflow].join('\n');
+  const joined = [config, ui, readme].join('\n');
   assert.match(joined, /github\.com\/voidnont\/Frxe-Desktop/);
   assert.doesNotMatch(joined, /github\.com\/voidnont\/Frxe-Windows/i);
 });
 
 test('Frxe Desktop ships without an in-app updater', async () => {
-  const [cargo, lib, capabilities, config, backend, app, ui, windowsWorkflow, linuxWorkflow, macWorkflow, releaseWorkflow] = await Promise.all([
+  const [cargo, lib, capabilities, config, backend, app, ui, windowsWorkflow, linuxWorkflow, macWorkflow] = await Promise.all([
     read('src-tauri/Cargo.toml'),
     read('src-tauri/src/lib.rs'),
     read('src-tauri/capabilities/default.json'),
@@ -145,9 +141,8 @@ test('Frxe Desktop ships without an in-app updater', async () => {
     read('.github/workflows/windows-msi.yml'),
     read('.github/workflows/linux-packages.yml'),
     read('.github/workflows/macos-dmg.yml'),
-    read('.github/workflows/release-installers.yml'),
   ]);
-  const joined = [cargo, lib, capabilities, config, backend, app, ui, windowsWorkflow, linuxWorkflow, macWorkflow, releaseWorkflow].join('\n');
+  const joined = [cargo, lib, capabilities, config, backend, app, ui, windowsWorkflow, linuxWorkflow, macWorkflow].join('\n');
   assert.doesNotMatch(joined, /tauri-plugin-updater|tauri_plugin_updater|updater:default|check_app_update|install_app_update|checkAppUpdate|installAppUpdate|app-update-progress|createUpdaterArtifacts|latest\.json|TAURI_SIGNING_PRIVATE_KEY|Frxe Updates|Check for updates|Update now/);
   assert.equal(await exists('src-tauri/src/updater.rs'), false);
   assert.equal(await exists('tools/generate-latest-json.mjs'), false);
@@ -155,7 +150,11 @@ test('Frxe Desktop ships without an in-app updater', async () => {
   assert.equal(await exists('tests/release-metadata.test.mjs'), false);
 });
 
-test('CI publishes the exact Windows Linux and macOS 1.2.2 package names', async () => {
+test('one-off v1.2.2 release publisher is removed after release', async () => {
+  assert.equal(await exists('.github/workflows/release-installers.yml'), false);
+});
+
+test('platform CI packages the exact Windows Linux and macOS 1.2.2 names', async () => {
   const [windowsWorkflow, linuxWorkflow, macWorkflow] = await Promise.all([
     read('.github/workflows/windows-msi.yml'),
     read('.github/workflows/linux-packages.yml'),
