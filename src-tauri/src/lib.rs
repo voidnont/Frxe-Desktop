@@ -30,6 +30,7 @@ pub fn run() {
             downloads::remove_download,
             lyrics::fetch_metadata_lyrics,
             runtime::update_runtime_dependencies,
+            runtime::current_runtime_status,
             tray::set_tray_enabled,
             exit_app
         ])
