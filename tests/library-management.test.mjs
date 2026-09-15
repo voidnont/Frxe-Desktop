@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 const core = await import('../web/core.mjs');
+const [appSource, uiSource] = await Promise.all([
+  readFile(new URL('../web/app.mjs', import.meta.url), 'utf8'),
+  readFile(new URL('../web/ui.mjs', import.meta.url), 'utf8'),
+]);
 
 const localTrack = { kind: 'local', id: '/music/song.mp3', path: '/music/song.mp3', title: 'Song' };
 const otherTrack = { kind: 'youtube', id: 'video-1', title: 'Other' };
@@ -26,4 +31,11 @@ test('removing a downloaded track prunes every saved reference to that local tra
     { id: 'mix', name: 'Mix', tracks: [otherTrack] },
     { id: 'empty', name: 'Empty', tracks: [] },
   ]);
+});
+
+test('downloaded tracks can be removed through the safe native delete flow', () => {
+  assert.match(uiSource, /data-action="remove-download"/);
+  assert.match(appSource, /case 'remove-download'/);
+  assert.match(appSource, /backend\.removeDownload\(target\.path, state\.prefs\.downloadDir\)/);
+  assert.match(appSource, /removeTrackReferences\(/);
 });
