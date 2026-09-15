@@ -70,6 +70,21 @@ export function deletePlaylist(playlists, playlistId) {
   return current.filter((playlist) => playlist?.id !== playlistId);
 }
 
+export function removeTrackReferences(collections, track) {
+  const key = trackKey(track);
+  const filterTracks = (items) => (Array.isArray(items) ? items : []).filter((item) => trackKey(item) !== key);
+  const playlists = (Array.isArray(collections?.playlists) ? collections.playlists : []).map((playlist) => ({
+    ...playlist,
+    tracks: filterTracks(playlist?.tracks),
+  }));
+  return {
+    queue: filterTracks(collections?.queue),
+    favorites: filterTracks(collections?.favorites),
+    history: filterTracks(collections?.history),
+    playlists,
+  };
+}
+
 export function queuePrefetchTracks(queue, index, distance = 2) {
   if (!Array.isArray(queue) || !queue.length || !Number.isInteger(index)) return [];
   const output = [];
