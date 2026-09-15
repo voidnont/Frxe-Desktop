@@ -70,20 +70,26 @@ export function deletePlaylist(playlists, playlistId) {
   return current.filter((playlist) => playlist?.id !== playlistId);
 }
 
-export function removeTrackReferences(collections, track) {
+export function pruneTrackReferences(collections, track) {
   const key = trackKey(track);
   const filterTracks = (items) => (Array.isArray(items) ? items : []).filter((item) => trackKey(item) !== key);
+  const queue = filterTracks(collections?.queue);
+  const requestedIndex = Number.isInteger(collections?.queueIndex) ? collections.queueIndex : -1;
+  const queueIndex = !queue.length || requestedIndex < 0 ? -1 : Math.min(requestedIndex, queue.length - 1);
   const playlists = (Array.isArray(collections?.playlists) ? collections.playlists : []).map((playlist) => ({
     ...playlist,
     tracks: filterTracks(playlist?.tracks),
   }));
   return {
-    queue: filterTracks(collections?.queue),
+    queue,
+    queueIndex,
     favorites: filterTracks(collections?.favorites),
     history: filterTracks(collections?.history),
     playlists,
   };
 }
+
+export const removeTrackReferences = pruneTrackReferences;
 
 export function queuePrefetchTracks(queue, index, distance = 2) {
   if (!Array.isArray(queue) || !queue.length || !Number.isInteger(index)) return [];
