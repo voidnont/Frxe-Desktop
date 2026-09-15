@@ -57,6 +57,15 @@ test('playlist creation returns a stable local record', () => {
   ]);
 });
 
+test('adding a playlist track prevents duplicates by track key', () => {
+  assert.equal(typeof core.addTrackToPlaylist, 'function', 'addTrackToPlaylist must exist');
+  const playlists = [{ id: 'playlist-1', name: 'Road Trip', tracks: [a] }];
+  assert.deepEqual(core.addTrackToPlaylist(playlists, 'playlist-1', b), [
+    { id: 'playlist-1', name: 'Road Trip', tracks: [a, b] },
+  ]);
+  assert.deepEqual(core.addTrackToPlaylist(playlists, 'playlist-1', { ...a, title: 'Duplicate A' }), playlists);
+});
+
 test('queuePrefetchTracks warms nearby previous and next tracks', () => {
   assert.deepEqual(queuePrefetchTracks([a, b, c, d], 1, 2), [a, c, d]);
   assert.deepEqual(queuePrefetchTracks([a, b], 0, 2), [b]);
