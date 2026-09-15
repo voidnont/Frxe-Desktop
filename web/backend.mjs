@@ -90,6 +90,10 @@ export function createBackend({ invoke, listen = null, convertFileSrc = (path) =
       return invoke('set_tray_enabled', { enabled });
     },
 
+    updateMediaControls(snapshot) {
+      return invoke('update_media_controls', { snapshot });
+    },
+
     onDownloadProgress(handler) {
       if (typeof listen !== 'function') return Promise.resolve(() => {});
       return listen('download-progress', (event) => handler(event.payload));
