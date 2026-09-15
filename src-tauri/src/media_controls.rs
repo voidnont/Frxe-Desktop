@@ -1,0 +1,105 @@
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use playwire::{Event, Repeat};
+    use serde_json::json;
+    use std::time::Duration;
+
+    fn snapshot() -> MediaPlaybackSnapshot {
+        MediaPlaybackSnapshot {
+            track_id: Some("track-1".to_string()),
+            title: Some("Song".to_string()),
+            artist: Some("Artist".to_string()),
+            album: Some("Album".to_string()),
+            artwork: "https://img.test/cover.jpg".to_string(),
+            duration_seconds: Some(100.0),
+            position_seconds: 42.0,
+            playing: true,
+            volume: 0.75,
+            shuffle: true,
+            repeat: "queue".to_string(),
+            can_next: true,
+            can_previous: false,
+            can_seek: true,
+        }
+    }
+
+    #[test]
+    fn maps_snapshot_to_playwire_state() {
+        let state = snapshot_to_playwire(&snapshot());
+        let track = state.track.expect("track metadata");
+        assert_eq!(track.id, "track-1");
+        assert_eq!(track.title, "Song");
+        assert_eq!(track.artists, vec!["Artist"]);
+        assert_eq!(track.album, "Album");
+        assert_eq!(track.artwork_url, "https://img.test/cover.jpg");
+        assert_eq!(state.position, Duration::from_secs(42));
+        assert_eq!(state.duration, Some(Duration::from_secs(100)));
+        assert_eq!(state.volume, 0.75);
+        assert_eq!(state.repeat, Repeat::All);
+        assert!(state.shuffle);
+        assert!(state.capabilities.can_go_next);
+        assert!(!state.capabilities.can_go_previous);
+        assert!(state.capabilities.can_seek);
+    }
+
+    #[test]
+    fn clamps_position_and_volume() {
+        let mut input = snapshot();
+        input.duration_seconds = Some(100.0);
+        input.position_seconds = 150.0;
+        input.volume = 2.0;
+        let state = snapshot_to_playwire(&input);
+        assert_eq!(state.position, Duration::from_secs(100));
+        assert_eq!(state.volume, 1.0);
+    }
+
+    #[test]
+    fn maps_native_events_to_player_commands() {
+        assert_eq!(event_payload(Event::Play), Some(json!({ "action": "play" })));
+        assert_eq!(event_payload(Event::Pause), Some(json!({ "action": "pause" })));
+        assert_eq!(event_payload(Event::PlayPause), Some(json!({ "action": "toggle-play" })));
+        assert_eq!(event_payload(Event::Next), Some(json!({ "action": "next" })));
+        assert_eq!(event_payload(Event::Previous), Some(json!({ "action": "previous" })));
+        assert_eq!(event_payload(Event::Stop), Some(json!({ "action": "stop" })));
+        assert_eq!(
+            event_payload(Event::SeekTo(Duration::from_secs(25))),
+            Some(json!({ "action": "seek-to", "positionSeconds": 25.0 }))
+        );
+        assert_eq!(
+            event_payload(Event::SeekBy(-10.0)),
+            Some(json!({ "action": "seek-by", "offsetSeconds": -10.0 }))
+        );
+        assert_eq!(
+            event_payload(Event::SetVolume(0.4)),
+            Some(json!({ "action": "set-volume", "volume": 0.4 }))
+        );
+        assert_eq!(
+            event_payload(Event::SetShuffle(true)),
+            Some(json!({ "action": "set-shuffle", "enabled": true }))
+        );
+        assert_eq!(
+            event_payload(Event::SetRepeat(Repeat::One)),
+            Some(json!({ "action": "set-repeat", "mode": "track" }))
+        );
+        assert_eq!(
+            event_payload(Event::SetRepeat(Repeat::All)),
+            Some(json!({ "action": "set-repeat", "mode": "queue" }))
+        );
+        assert_eq!(
+            event_payload(Event::SetRepeat(Repeat::Off)),
+            Some(json!({ "action": "set-repeat", "mode": "off" }))
+        );
+        assert_eq!(event_payload(Event::OpenUri("https://example.test".to_string())), None);
+    }
+
+    #[test]
+    fn empty_snapshot_clears_track() {
+        let mut input = snapshot();
+        input.track_id = None;
+        input.playing = true;
+        let state = snapshot_to_playwire(&input);
+        assert!(state.track.is_none());
+        assert!(!state.playing);
+    }
+}
