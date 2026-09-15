@@ -44,9 +44,10 @@ test('nextQueueIndex handles sequential, repeat-track and repeat-queue playback'
   assert.equal(nextQueueIndex({ index: 2, length: 3, repeat: 'queue', shuffle: false }), 0);
 });
 
-test('queue selection falls back to the clicked track when candidates omit it', () => {
+test('playback queue keeps the clicked track aligned with its active index', () => {
   assert.equal(typeof core.selectPlaybackQueue, 'function', 'selectPlaybackQueue must exist');
-  assert.deepEqual(core.selectPlaybackQueue(c, [a, b]), { queue: [c], index: 0 });
+  assert.deepEqual(core.selectPlaybackQueue(b, [a, b, c]), { queue: [a, b, c], index: 1 });
+  assert.deepEqual(core.selectPlaybackQueue(d, [a, b, c]), { queue: [d], index: 0 });
 });
 
 test('queuePrefetchTracks warms nearby previous and next tracks', () => {
