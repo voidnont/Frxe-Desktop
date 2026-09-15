@@ -50,6 +50,13 @@ test('playback queue keeps the clicked track aligned with its active index', () 
   assert.deepEqual(core.selectPlaybackQueue(d, [a, b, c]), { queue: [d], index: 0 });
 });
 
+test('playlist creation returns a stable local record', () => {
+  assert.equal(typeof core.createPlaylist, 'function', 'createPlaylist must exist');
+  assert.deepEqual(core.createPlaylist([], '  Road Trip  ', 'playlist-1'), [
+    { id: 'playlist-1', name: 'Road Trip', tracks: [] },
+  ]);
+});
+
 test('queuePrefetchTracks warms nearby previous and next tracks', () => {
   assert.deepEqual(queuePrefetchTracks([a, b, c, d], 1, 2), [a, c, d]);
   assert.deepEqual(queuePrefetchTracks([a, b], 0, 2), [b]);
