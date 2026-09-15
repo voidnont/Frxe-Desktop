@@ -17,6 +17,7 @@ import {
   trackKey,
 } from './core.mjs';
 import { createBackend } from './backend.mjs';
+import { applyNativeMediaCommand, buildMediaPlaybackSnapshot } from './media-controls.mjs';
 import { createView } from './ui.mjs';
 
 const KEYS = {
@@ -116,6 +117,80 @@ function readableError(error) {
   return value.length > 220 ? `${value.slice(0, 217)}…` : value;
 }
 
+function syncNativeMediaControls() {
+  const snapshot = buildMediaPlaybackSnapshot({
+    track: state.current,
+    queue: state.queue,
+    queueIndex: state.queueIndex,
+    prefs: state.prefs,
+    playing: state.playing,
+    positionSeconds: audio.currentTime,
+    durationSeconds: audio.duration,
+  });
+  void backend.updateMediaControls(snapshot).catch(() => {});
+}
+
+function seekTo(position) {
+  const value = Math.max(0, Number(position) || 0);
+  audio.currentTime = Number.isFinite(audio.duration) && audio.duration > 0
+    ? Math.min(value, audio.duration)
+    : value;
+  syncPlayerUi();
+  syncNativeMediaControls();
+}
+
+function seekBy(offset) {
+  seekTo((Number(audio.currentTime) || 0) + (Number(offset) || 0));
+}
+
+function setVolume(volume) {
+  const value = Math.max(0, Math.min(1, Number(volume) || 0));
+  state.prefs.volume = value;
+  state.prefs.muted = value === 0;
+  audio.volume = value;
+  audio.muted = state.prefs.muted;
+  savePrefs();
+  render();
+  syncNativeMediaControls();
+}
+
+function setShuffle(enabled) {
+  state.prefs.shuffle = Boolean(enabled);
+  savePrefs();
+  render();
+  syncNativeMediaControls();
+}
+
+function setRepeat(mode) {
+  if (!['off', 'queue', 'track'].includes(mode)) return;
+  state.prefs.repeat = mode;
+  savePrefs();
+  render();
+  syncNativeMediaControls();
+}
+
+function stopPlayback() {
+  audio.pause();
+  audio.currentTime = 0;
+  state.playing = false;
+  render();
+  syncNativeMediaControls();
+}
+
+const nativeMediaActions = {
+  play: async () => { if (state.current) await audio.play().catch(() => {}); },
+  pause: () => audio.pause(),
+  togglePlay: () => togglePlay(),
+  next: () => goNext(),
+  previous: () => goPrevious(),
+  stop: stopPlayback,
+  seekTo,
+  seekBy,
+  setVolume,
+  setShuffle,
+  setRepeat,
+};
+
 function updateMediaSession(track) {
   if (!('mediaSession' in navigator) || !track) return;
   try {
@@ -143,6 +218,7 @@ async function playTrack(track, queue = null, index = null) {
       state.queueIndex = index ?? Math.max(0, state.queue.findIndex((item) => trackKey(item) === trackKey(track)));
       prefetchQueueSources();
       saveSession();
+      syncNativeMediaControls();
     }
     if (audio.paused) await audio.play().catch((error) => toast(readableError(error), 'error'));
     else audio.pause();
@@ -168,6 +244,7 @@ async function playTrack(track, queue = null, index = null) {
   pushHistory(track);
   prefetchQueueSources();
   render();
+  syncNativeMediaControls();
 
   try {
     const source = await sourceCache.get(track);
@@ -189,6 +266,7 @@ async function playTrack(track, queue = null, index = null) {
       state.resolving = false;
       saveSession();
       render();
+      syncNativeMediaControls();
     }
   }
 }
@@ -208,9 +286,10 @@ async function togglePlay() {
 
 async function goNext() {
   const nextIndex = nextQueueIndex({ index: state.queueIndex, length: state.queue.length, repeat: state.prefs.repeat, shuffle: state.prefs.shuffle });
-  if (nextIndex < 0) { audio.pause(); audio.currentTime = 0; return; }
+  if (nextIndex < 0) { audio.pause(); audio.currentTime = 0; syncNativeMediaControls(); return; }
   if (nextIndex === state.queueIndex) {
     audio.currentTime = 0;
+    syncNativeMediaControls();
     if (audio.paused) await audio.play().catch(() => {});
     return;
   }
@@ -218,12 +297,13 @@ async function goNext() {
 }
 
 async function goPrevious() {
-  if (audio.currentTime > 4) { audio.currentTime = 0; return; }
+  if (audio.currentTime > 4) { audio.currentTime = 0; syncNativeMediaControls(); return; }
   if (!state.queue.length) return;
   let index = state.queueIndex - 1;
   if (index < 0) index = state.prefs.repeat === 'queue' ? state.queue.length - 1 : 0;
   if (index === state.queueIndex) {
     audio.currentTime = 0;
+    syncNativeMediaControls();
     if (audio.paused) await audio.play().catch(() => {});
     return;
   }
@@ -369,6 +449,7 @@ async function removeOfflineTrack(target) {
     saveSession();
     await refreshOffline();
     render();
+    syncNativeMediaControls();
     toast(`Removed ${target.title}`);
   } catch (error) {
     toast(`Could not remove ${target.title}: ${readableError(error)}`, 'error');
@@ -424,13 +505,16 @@ async function restoreSession() {
   state.queue = Array.isArray(session.queue) && session.queue.length ? session.queue : [session.track];
   state.queueIndex = Number.isInteger(session.queueIndex) ? session.queueIndex : 0;
   updateAmbient(state.current);
+  updateMediaSession(state.current);
   prefetchQueueSources();
   try {
     audio.src = await sourceCache.get(state.current);
     audio.addEventListener('loadedmetadata', () => {
       if (Number.isFinite(session.position)) audio.currentTime = Math.min(session.position, audio.duration || session.position);
+      syncNativeMediaControls();
     }, { once: true });
   } catch {}
+  syncNativeMediaControls();
 }
 
 function ensureUiEnhancements() {
@@ -446,12 +530,7 @@ function ensureUiEnhancements() {
   if (miniVolume && miniVolume.dataset.bound !== '1') {
     miniVolume.dataset.bound = '1';
     miniVolume.addEventListener('input', (event) => {
-      const value = Number(event.target.value);
-      state.prefs.volume = value;
-      state.prefs.muted = value === 0;
-      audio.volume = value;
-      audio.muted = state.prefs.muted;
-      savePrefs();
+      setVolume(Number(event.target.value));
     });
   }
   if (miniVolume && !miniVolume.matches(':active')) {
@@ -569,8 +648,8 @@ app.addEventListener('click', async (event) => {
     }
     case 'clear-search': state.searchQuery = ''; state.searchResults = []; state.searchError = ''; render(); setTimeout(() => document.querySelector('#search-input')?.focus(), 0); break;
     case 'retry-search': await performSearch(state.searchQuery); break;
-    case 'shuffle': state.prefs.shuffle = !state.prefs.shuffle; savePrefs(); render(); break;
-    case 'repeat': state.prefs.repeat = state.prefs.repeat === 'off' ? 'queue' : state.prefs.repeat === 'queue' ? 'track' : 'off'; savePrefs(); render(); break;
+    case 'shuffle': state.prefs.shuffle = !state.prefs.shuffle; savePrefs(); render(); syncNativeMediaControls(); break;
+    case 'repeat': state.prefs.repeat = state.prefs.repeat === 'off' ? 'queue' : state.prefs.repeat === 'queue' ? 'track' : 'off'; savePrefs(); render(); syncNativeMediaControls(); break;
     case 'queue-play': { const index = Number(button.dataset.index); if (state.queue[index]) await playTrack(state.queue[index], state.queue, index); break; }
     case 'cancel-download': { const task = state.downloads.find((item) => item.id === button.dataset.task); if (task) { await backend.cancelDownload(task.id).catch(() => {}); state.downloads = state.downloads.filter((item) => item.id !== task.id); render(); } break; }
     case 'retry-download': { const task = state.downloads.find((item) => item.id === button.dataset.task); if (task) await queueDownload(task.track, task); break; }
@@ -587,10 +666,10 @@ document.querySelectorAll('[data-window]').forEach((button) => button.addEventLi
   if (action === 'close') await currentWindow.close();
 }));
 
-audio.addEventListener('play', () => { state.playing = true; document.body.classList.add('is-playing'); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'; render(); });
-audio.addEventListener('pause', () => { state.playing = false; document.body.classList.remove('is-playing'); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'; render(); saveSession(); });
-audio.addEventListener('timeupdate', syncPlayerUi);
-audio.addEventListener('durationchange', syncPlayerUi);
+audio.addEventListener('play', () => { state.playing = true; document.body.classList.add('is-playing'); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'; render(); syncNativeMediaControls(); });
+audio.addEventListener('pause', () => { state.playing = false; document.body.classList.remove('is-playing'); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'; render(); saveSession(); syncNativeMediaControls(); });
+audio.addEventListener('timeupdate', () => { syncPlayerUi(); syncNativeMediaControls(); });
+audio.addEventListener('durationchange', () => { syncPlayerUi(); syncNativeMediaControls(); });
 audio.addEventListener('ended', goNext);
 audio.addEventListener('error', () => {
   if (state.current) {
@@ -619,19 +698,16 @@ async function initialize() {
       pause: () => audio.pause(),
       previoustrack: () => void goPrevious(),
       nexttrack: () => void goNext(),
-      seekto: (details) => { if (Number.isFinite(details.seekTime)) audio.currentTime = details.seekTime; },
-      seekbackward: (details) => { audio.currentTime = Math.max(0, audio.currentTime - (details.seekOffset || 10)); },
-      seekforward: (details) => { audio.currentTime = Math.min(audio.duration || Infinity, audio.currentTime + (details.seekOffset || 10)); },
+      seekto: (details) => { if (Number.isFinite(details.seekTime)) seekTo(details.seekTime); },
+      seekbackward: (details) => { seekBy(-(details.seekOffset || 10)); },
+      seekforward: (details) => { seekBy(details.seekOffset || 10); },
     };
     for (const [action, handler] of Object.entries(handlers)) { try { navigator.mediaSession.setActionHandler(action, handler); } catch {} }
   }
   if (listen) {
     try {
       await listen('player-command', ({ payload }) => {
-        const action = payload?.action;
-        if (action === 'toggle-play') void togglePlay();
-        if (action === 'next') void goNext();
-        if (action === 'previous') void goPrevious();
+        void applyNativeMediaCommand(nativeMediaActions, payload);
       });
     } catch {}
   }
@@ -663,6 +739,7 @@ async function initialize() {
   await restoreSession();
   await refreshOffline();
   render();
+  syncNativeMediaControls();
 }
 
 window.addEventListener('beforeunload', () => {
