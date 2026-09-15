@@ -29,9 +29,9 @@ export function dedupeTracks(groups) {
 
 export function selectPlaybackQueue(track, candidates = []) {
   if (!track) return { queue: [], index: -1 };
-  const queue = Array.isArray(candidates) ? candidates : [];
-  const index = queue.findIndex((item) => trackKey(item) === trackKey(track));
-  if (index >= 0) return { queue: [...queue], index };
+  const candidateQueue = Array.isArray(candidates) ? candidates : [];
+  const index = candidateQueue.findIndex((item) => trackKey(item) === trackKey(track));
+  if (index >= 0) return { queue: [...candidateQueue], index };
   return { queue: [track], index: 0 };
 }
 
