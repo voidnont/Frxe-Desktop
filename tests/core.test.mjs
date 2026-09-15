@@ -66,6 +66,18 @@ test('adding a playlist track prevents duplicates by track key', () => {
   assert.deepEqual(core.addTrackToPlaylist(playlists, 'playlist-1', { ...a, title: 'Duplicate A' }), playlists);
 });
 
+test('removing a playlist track only changes the targeted playlist', () => {
+  assert.equal(typeof core.removeTrackFromPlaylist, 'function', 'removeTrackFromPlaylist must exist');
+  const playlists = [
+    { id: 'playlist-1', name: 'Road Trip', tracks: [a, b] },
+    { id: 'playlist-2', name: 'Keep', tracks: [a] },
+  ];
+  assert.deepEqual(core.removeTrackFromPlaylist(playlists, 'playlist-1', a), [
+    { id: 'playlist-1', name: 'Road Trip', tracks: [b] },
+    { id: 'playlist-2', name: 'Keep', tracks: [a] },
+  ]);
+});
+
 test('queuePrefetchTracks warms nearby previous and next tracks', () => {
   assert.deepEqual(queuePrefetchTracks([a, b, c, d], 1, 2), [a, c, d]);
   assert.deepEqual(queuePrefetchTracks([a, b], 0, 2), [b]);
