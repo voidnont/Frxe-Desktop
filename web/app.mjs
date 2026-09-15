@@ -91,7 +91,7 @@ function persistLists() {
 
 const { render, toast, updateAmbient, isFavorite } = createView({
   state, app, audio, ambient, toastHost, backend, convertFileSrc, trackRegistry, savePrefs, persistLists,
-  actions: { performSearch, refreshOffline, syncPlayerUi, createLocalPlaylist },
+  actions: { performSearch, refreshOffline, syncPlayerUi, createLocalPlaylist, seekTo, setVolume },
 });
 
 async function performSearch(query) {
