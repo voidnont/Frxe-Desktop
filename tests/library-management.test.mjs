@@ -39,3 +39,14 @@ test('downloaded tracks can be removed through the safe native delete flow', () 
   assert.match(appSource, /backend\.removeDownload\(target\.path, state\.prefs\.downloadDir\)/);
   assert.match(appSource, /removeTrackReferences\(/);
 });
+
+test('Library history can remove one track or clear all recent playback', () => {
+  assert.match(uiSource, /<h2>Recently played<\/h2>/);
+  assert.match(uiSource, /data-action="remove-history"/);
+  assert.match(uiSource, /data-action="clear-history"/);
+  assert.match(appSource, /case 'remove-history'/);
+  assert.match(appSource, /case 'clear-history'/);
+  assert.match(appSource, /state\.history = state\.history\.filter/);
+  assert.match(appSource, /state\.history = \[\]/);
+  assert.match(appSource, /persistLists\(\)/);
+});
