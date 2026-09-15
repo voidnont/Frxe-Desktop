@@ -78,6 +78,17 @@ test('removing a playlist track only changes the targeted playlist', () => {
   ]);
 });
 
+test('deleting a playlist removes only the targeted record', () => {
+  assert.equal(typeof core.deletePlaylist, 'function', 'deletePlaylist must exist');
+  const playlists = [
+    { id: 'playlist-1', name: 'Road Trip', tracks: [a] },
+    { id: 'playlist-2', name: 'Keep', tracks: [b] },
+  ];
+  assert.deepEqual(core.deletePlaylist(playlists, 'playlist-1'), [
+    { id: 'playlist-2', name: 'Keep', tracks: [b] },
+  ]);
+});
+
 test('queuePrefetchTracks warms nearby previous and next tracks', () => {
   assert.deepEqual(queuePrefetchTracks([a, b, c, d], 1, 2), [a, c, d]);
   assert.deepEqual(queuePrefetchTracks([a, b], 0, 2), [b]);
