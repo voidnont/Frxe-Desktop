@@ -142,7 +142,7 @@ fn client_settings(client: &str) -> Result<(&'static str, &'static str, &'static
 async fn fetch_innertube_config(client: &str) -> Result<InnerTubeConfig, String> {
     let (homepage, endpoint, client_name) = client_settings(client)?;
     let http = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Frxe-Desktop/1.2.3")
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Frxe-Desktop/1.2.4")
         .build()
         .map_err(|e| e.to_string())?;
     let html = http
@@ -197,7 +197,7 @@ pub async fn innertube_search(query: String, client: String) -> Result<Vec<Track
     });
     let response: Value = reqwest::Client::new()
         .post(url)
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Frxe-Desktop/1.2.3")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Frxe-Desktop/1.2.4")
         .header("Referer", &cfg.homepage)
         .json(&body)
         .send()

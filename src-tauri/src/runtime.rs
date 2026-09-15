@@ -123,7 +123,7 @@ pub async fn update_runtime_dependencies(app: tauri::AppHandle) -> Result<Runtim
     let target = dir.join(ytdlp_asset_name());
     let response = reqwest::Client::new()
         .get(ytdlp_download_url())
-        .header("User-Agent", "Frxe-Desktop/1.2.3")
+        .header("User-Agent", "Frxe-Desktop/1.2.4")
         .send()
         .await
         .map_err(|e| format!("Could not download yt-dlp: {e}"))?

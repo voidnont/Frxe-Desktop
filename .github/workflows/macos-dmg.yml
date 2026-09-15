@@ -7,17 +7,18 @@ permissions:
   contents: read
 
 jobs:
-  build-macos:
+  build-dmg:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-26
-            file: Frxe-Desktop-1.2.3-macos-arm64.dmg
-            artifact: Frxe-Desktop-1.2.3-macOS-Apple-Silicon
-          - runner: macos-26-intel
-            file: Frxe-Desktop-1.2.3-macos-x64.dmg
-            artifact: Frxe-Desktop-1.2.3-macOS-Intel
+          - runner: macos-15
+            artifact: Frxe-Desktop-1.2.4-macOS-Apple-Silicon
+            package: release-upload/Frxe-Desktop-1.2.4-macos-arm64.dmg
+          - runner: macos-15-intel
+            artifact: Frxe-Desktop-1.2.4-macOS-Intel
+            package: release-upload/Frxe-Desktop-1.2.4-macos-x64.dmg
+
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
@@ -35,15 +36,11 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build macOS package
-        shell: bash
-        run: |
-          set -euo pipefail
-          bash platforms/macos/build.sh
-          test -f "release-upload/${{ matrix.file }}"
+        run: bash platforms/macos/build.sh
 
       - name: Upload Frxe Desktop macOS package
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: release-upload/${{ matrix.file }}
+          path: ${{ matrix.package }}
           if-no-files-found: error

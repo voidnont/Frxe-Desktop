@@ -10,8 +10,6 @@ jobs:
   build-linux:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    env:
-      APPIMAGE_EXTRACT_AND_RUN: '1'
     steps:
       - name: Checkout Frxe Desktop
         uses: actions/checkout@v4
@@ -30,18 +28,15 @@ jobs:
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-unknown-linux-gnu
 
       - name: Build Linux packages
-        shell: bash
         run: bash platforms/linux/build.sh
 
       - name: Upload Frxe Desktop Linux packages
         uses: actions/upload-artifact@v4
         with:
-          name: Frxe-Desktop-1.2.3-Linux
+          name: Frxe-Desktop-1.2.4-Linux
           path: |
-            release-upload/Frxe-Desktop-1.2.3-amd64.deb
-            release-upload/Frxe-Desktop-1.2.3-x86_64.AppImage
+            release-upload/Frxe-Desktop-1.2.4-amd64.deb
+            release-upload/Frxe-Desktop-1.2.4-x86_64.AppImage
           if-no-files-found: error
